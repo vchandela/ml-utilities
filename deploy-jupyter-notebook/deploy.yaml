@@ -1,0 +1,88 @@
+# 1. StatefulSet with volumeClaimTemplates
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: jupyter
+spec:
+  serviceName: "jupyter"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jupyter
+  template:
+    metadata:
+      labels:
+        app: jupyter
+    spec:
+      containers:
+      - name: notebook
+        image: asia-south1-docker.pkg.dev/company-simulation/jupyter/notebook:latest
+        ports:
+        - containerPort: 8888
+        resources:
+          requests:
+            cpu: "1"
+            memory: "4Gi"
+          limits:
+            cpu: "1"
+            memory: "4Gi"
+        volumeMounts:
+        - name: data
+          mountPath: /home/jovyan
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      storageClassName: standard
+      resources:
+        requests:
+          storage: 1Gi
+
+---
+# 2. Headless service for stable pod DNS
+apiVersion: v1
+kind: Service
+metadata:
+  name: jupyter
+spec:
+  clusterIP: None
+  selector:
+    app: jupyter
+  ports:
+  - name: http
+    port: 8888
+    targetPort: 8888
+
+---
+# 2a. Per-pod services for ingress routing
+apiVersion: v1
+kind: Service
+metadata:
+  name: jupyter-0-svc
+spec:
+  selector:
+    statefulset.kubernetes.io/pod-name: jupyter-0
+  ports:
+  - port: 8888
+    targetPort: 8888
+---
+# 3. Ingress to map each pod to a URL path
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: jupyter-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  rules:
+  - host: notebooks.pavo.ai
+    http:
+      paths:
+      - path: /jupyter-0(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: jupyter-0-svc
+            port:
+              number: 8888
