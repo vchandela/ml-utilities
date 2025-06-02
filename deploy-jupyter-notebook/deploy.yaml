@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: notebook
-        image: asia-south1-docker.pkg.dev/company-simulation/jupyter/notebook:latest
+        image: asia-south1-docker.pkg.dev/onboarding-455713/jupyter/notebook:latest
         ports:
         - containerPort: 8888
         resources:
