@@ -6,4 +6,4 @@ docker build -t jupyter-notebook .
 docker run -it -p 8888:8888 -v $(pwd)/notebooks:/home/jovyan jupyter-notebook
 ```
 
-- Now, you can access the notebook at `http://localhost:8888` using `app.ipynb`
+- Now, you can access the notebook at `http://localhost:8888` using `app.ipynb`. Just change the `url` for local env.

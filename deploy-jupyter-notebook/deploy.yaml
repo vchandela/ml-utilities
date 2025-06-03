@@ -28,6 +28,14 @@ spec:
       containers:
       - name: notebook
         image: asia-south1-docker.pkg.dev/onboarding-455713/jupyter/notebook:latest
+        # Provide token auth in --NotebookApp.token='<token>' for production environment
+        command: 
+          - sh
+          - -c
+          - |
+            start-notebook.py --NotebookApp.token='' --NotebookApp.allow_origin='*' \
+            --NotebookApp.allow_remote_access=True --NotebookApp.disable_check_xsrf=True \
+            --ServerApp.base_url=/jupyter-0 
         ports:
         - containerPort: 8888
         securityContext:
@@ -87,14 +95,13 @@ metadata:
   name: jupyter-ingress
   annotations:
     kubernetes.io/ingress.class: "nginx"
-    nginx.ingress.kubernetes.io/rewrite-target: /$2
 spec:
   ingressClassName: nginx
   rules:
   - host: notebooks.pavo.ai
     http:
       paths:
-      - path: /jupyter-0(/|$)(.*)
+      - path: /jupyter-0/
         pathType: Prefix
         backend:
           service:
