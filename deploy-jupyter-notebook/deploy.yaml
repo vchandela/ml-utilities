@@ -14,11 +14,24 @@ spec:
       labels:
         app: jupyter
     spec:
+      securityContext:
+        fsGroup: 100          # makes every file/dir on PVC group-owned by users (gid=100)) to which jovyan (UID=1000) also belongs
+      initContainers:
+      - name: seed-notebook
+        image: asia-south1-docker.pkg.dev/onboarding-455713/jupyter/notebook:latest
+        command: ["sh", "-c", "cp -n /home/jovyan/test.ipynb /mnt/pvc || true"]
+        securityContext:
+          runAsUser: 0        # run as root so copy always works
+        volumeMounts:
+        - name: data
+          mountPath: /mnt/pvc
       containers:
       - name: notebook
         image: asia-south1-docker.pkg.dev/onboarding-455713/jupyter/notebook:latest
         ports:
         - containerPort: 8888
+        securityContext:
+          runAsUser: 1000     # explicitly use jovyan UID
         resources:
           requests:
             cpu: "1"
