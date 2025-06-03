@@ -1,5 +1,6 @@
 FROM jupyter/base-notebook
 
+COPY notebooks/test.ipynb /home/jovyan/
 COPY requirements.txt /home/jovyan/
 
 WORKDIR /home/jovyan

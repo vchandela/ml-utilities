@@ -1,4 +1,5 @@
 #### Local deployment
+- Remove this line `COPY notebooks/test.ipynb /home/jovyan/` from the Dockerfile.
 - We use a bind mount to persist the changes in the jupyter notebook
 ```bash
 docker build -t jupyter-notebook .
