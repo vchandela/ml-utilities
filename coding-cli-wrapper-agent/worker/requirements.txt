@@ -1,0 +1,8 @@
+redis>=4.5.0
+requests>=2.30.0
+pydantic>=2.0.0
+pytest>=7.0.0
+GitPython>=3.1.0
+# Code engines - to be added when implementing specific engines
+# google-generativeai  # for Gemini CLI
+# anthropic            # for Claude CLI 

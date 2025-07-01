@@ -1,0 +1,9 @@
+# Shared dependencies (used by both API and worker)
+pydantic>=2.0.0
+redis>=4.5.0
+requests>=2.30.0
+
+# Development tools (for local development/testing)
+pytest>=7.0.0
+black>=23.0.0
+flake8>=6.0.0 

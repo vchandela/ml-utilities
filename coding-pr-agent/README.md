@@ -7,5 +7,5 @@ https://medium.com/e-two-b/i-built-an-ai-developer-that-makes-pull-requests-a51f
 - Add `OPENAI_API_KEY` in `.env`
 - Run: `python assistants.py` to create your assistant ID
 - Copy the assistant ID to your `.env` file as `AI_ASSISTANT_ID`
-- Add remaining keys in `.env`
+- Add remaining keys in `.env` as per `.env.example`
 - `python main.py`

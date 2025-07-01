@@ -1,0 +1,32 @@
+name: coding-cli-wrapper-agent
+
+services:
+  # Always‑on API & Redis
+  agent-b-api:
+    build:
+      context: .
+      dockerfile: ./api/Dockerfile
+    environment:
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+    ports: ["8000:8000"]
+    depends_on: [redis]
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - .:/workspace
+    profiles: ["api"]
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+
+  # Worker image exists only for on‑demand runs
+  worker:
+    build:
+      context: .
+      dockerfile: ./worker/Dockerfile
+    environment:
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+    depends_on:
+      - redis
+    profiles: ["worker"]  # never starts with `up`, only via `run` 
