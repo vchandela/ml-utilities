@@ -8,16 +8,23 @@ Complete end-to-end workflow working:
 - ✅ API accepts tasks → Worker spawns → Code applied → Tests run → PR created
 - ✅ GitHub authentication for private repositories  
 - ✅ Redis state management with real-time progress tracking
+- ✅ **Gemini Engine**: Working with auto-approval (`--yolo` flag)
+- ✅ **Codex Engine**: Working with GPT-4.1 model and full automation (`--full-auto` flag)
 
 ## 🚀 Quick Setup
 
-### 1. GitHub Authentication
+### 1. Environment Setup
 ```bash
 # Copy and configure environment
 cp env.example .env
 
-# Add your GitHub token
-echo "GITHUB_TOKEN=ghp_your_token_here" >> .env
+# Add required credentials
+cat >> .env << EOF
+GITHUB_TOKEN=ghp_your_token_here
+GEMINI_API_KEY=your_gemini_api_key
+OPENAI_API_KEY=your_openai_api_key
+ANTHROPIC_API_KEY=your_anthropic_api_key
+EOF
 ```
 
 ### 2. Launch System
@@ -84,22 +91,32 @@ watch -n 2 'curl -s http://localhost:8000/tasks/{task_id} | jq'
 ## 💡 Examples
 
 ```bash
-# Private repository with custom instructions
+# Test Gemini engine (✅ Verified - creates PRs successfully)
+curl -X POST http://localhost:8000/tasks \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "repo": "https://github.com/pavoai/intern",
+    "instructions": "Append the word \"gemini\" at the end of README.md file",
+    "engine": "gemini"
+  }'
+
+# Test Codex engine with GPT-4.1 (✅ Verified - creates PRs successfully)
+curl -X POST http://localhost:8000/tasks \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "repo": "https://github.com/pavoai/intern",
+    "instructions": "Append the word \"gpt41-test\" at the end of README.md file",
+    "engine": "codex"
+  }'
+
+# Custom private repository
 curl -X POST http://localhost:8000/tasks \
   -H 'Content-Type: application/json' \
   -d '{
     "repo": "https://github.com/myorg/private-repo",
-    "instructions": "Add comprehensive input validation and security checks"
-  }'
-
-# Custom branch and engine
-curl -X POST http://localhost:8000/tasks \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "repo": "https://github.com/myorg/project",
-    "instructions": "Optimize database queries",
+    "instructions": "Add comprehensive input validation and security checks",
     "branch_base": "develop", 
-    "engine": "claude"
+    "engine": "gemini"
   }'
 ```
 
@@ -107,7 +124,15 @@ curl -X POST http://localhost:8000/tasks \
 
 **Required in `.env`:**
 - `GITHUB_TOKEN` - Personal access token with repo permissions
+- `GEMINI_API_KEY` - Google Gemini API key (for `engine: "gemini"`)
+- `OPENAI_API_KEY` - OpenAI API key (for `engine: "codex"`)
+- `ANTHROPIC_API_KEY` - Anthropic API key (for `engine: "claude"`)
 - `REDIS_URL` - Default: `redis://redis:6379/0`
+
+**Engine Details:**
+- **Gemini**: Uses `@google/gemini-cli` with `--yolo` flag for auto-approval
+- **Codex**: Uses `@openai/codex` with GPT-4.1 model and `--full-auto` flag
+- **Claude**: Uses `@anthropic-ai/claude-code` (configured but not yet tested)
 
 ## 🔍 Debugging
 

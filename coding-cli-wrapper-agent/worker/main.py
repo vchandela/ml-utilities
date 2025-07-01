@@ -131,21 +131,47 @@ def main():
                 
             log(f"Created and checked out branch: {branch_name}")
             
-            # 3. Apply engine (placeholder for now - will implement specific engines later)
+            # 3. Apply engine
             log(f"Applying {task.engine} engine...")
             
-            # For now, create a simple placeholder file to demonstrate the workflow
-            placeholder_file = repo_dir / "PAVO_AGENT_CHANGES.md"
-            with open(placeholder_file, "w") as f:
-                f.write(f"# Changes by Pavo Coding Agent\n\n")
-                f.write(f"Task ID: {task_id}\n")
-                f.write(f"Engine: {task.engine}\n")
-                f.write(f"Instructions: {task.instructions}\n\n")
-                f.write(f"## Changes Made\n\n")
-                f.write(f"This is a placeholder implementation. The actual {task.engine} engine integration will be implemented in future iterations.\n")
+            if task.engine == CodeEngine.gemini:
+                # Gemini CLI with direct prompt and auto-accept changes
+                cmd = ["gemini", "--prompt", task.instructions, "--yolo"]
+                if not os.getenv("GEMINI_API_KEY"):
+                    log("ERROR: GEMINI_API_KEY environment variable not provided")
+                    redis_client.hset(task_key, "state", "failed")
+                    redis_client.hset(task_key, "error", "GEMINI_API_KEY not provided")
+                    sys.exit(1)
+            elif task.engine == CodeEngine.claude:
+                # Claude Code non-interactive mode with direct prompt
+                cmd = ["claude", "--quiet", "--prompt", task.instructions]
+                if not os.getenv("ANTHROPIC_API_KEY"):
+                    log("ERROR: ANTHROPIC_API_KEY environment variable not provided")
+                    redis_client.hset(task_key, "state", "failed")
+                    redis_client.hset(task_key, "error", "ANTHROPIC_API_KEY not provided")
+                    sys.exit(1)
+            else:  # codex
+                # Codex with GPT-4.1 model and full automation (o3 requires org verification)
+                cmd = ["codex", "--quiet", "--model", "gpt-4.1", "--full-auto", task.instructions]
+                if not os.getenv("OPENAI_API_KEY"):
+                    log("ERROR: OPENAI_API_KEY environment variable not provided")
+                    redis_client.hset(task_key, "state", "failed")
+                    redis_client.hset(task_key, "error", "OPENAI_API_KEY not provided")
+                    sys.exit(1)
             
-            # Stage the changes
-            add_cmd = ["git", "add", "PAVO_AGENT_CHANGES.md"]
+            try:
+                log(f"Running engine command: {' '.join(cmd)}")
+                # CLI tools automatically inherit environment variables from container
+                subprocess.check_call(cmd, cwd=repo_dir)
+                log(f"Successfully applied {task.engine} engine")
+            except subprocess.CalledProcessError as e:
+                log(f"ERROR: {task.engine} engine failed: {e}")
+                redis_client.hset(task_key, "state", "failed")
+                redis_client.hset(task_key, "error", f"{task.engine} engine failed: {e}")
+                sys.exit(1)
+            
+            # Stage all changes made by the engine
+            add_cmd = ["git", "add", "."]
             result = subprocess.run(add_cmd, capture_output=True, text=True)
             
             if result.returncode != 0:

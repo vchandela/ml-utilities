@@ -79,10 +79,13 @@ async def create_task(task: Task) -> TaskResponse:
         # Use docker compose run with explicit compose file (project name set in compose file)
         worker_command = [
             "docker", "compose", "-f", "/workspace/docker-compose.yaml",
-            "run", "--rm",
+            "run",
             "-e", f"TASK_JSON={task_json}",
             "-e", f"REDIS_URL={settings.redis_url}",
             "-e", f"GITHUB_TOKEN={settings.github_token}",
+            "-e", f"GEMINI_API_KEY={os.getenv('GEMINI_API_KEY', '')}",
+            "-e", f"ANTHROPIC_API_KEY={os.getenv('ANTHROPIC_API_KEY', '')}",
+            "-e", f"OPENAI_API_KEY={os.getenv('OPENAI_API_KEY', '')}",
             "worker"
         ]
         

@@ -9,6 +9,9 @@ services:
     environment:
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
       GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
     ports: ["8000:8000"]
     depends_on: [redis]
     volumes:
@@ -25,8 +28,6 @@ services:
     build:
       context: .
       dockerfile: ./worker/Dockerfile
-    environment:
-      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
     depends_on:
       - redis
     profiles: ["worker"]  # never starts with `up`, only via `run` 

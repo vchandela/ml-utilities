@@ -1,10 +1,19 @@
-FROM python:3.11-slim
+FROM python:3.12-slim
 
-# Install git and other tools needed for code operations
-RUN apt-get update && apt-get install -y \
-    git \
-    curl \
+# Base OS deps
+RUN apt-get update \
+    && apt-get install -y git curl \
     && rm -rf /var/lib/apt/lists/*
+
+# Node.js (for CLI packages)
+RUN curl -fsSL https://deb.nodesource.com/setup_lts.x | bash - \
+    && apt-get install -y nodejs
+
+# Install Gemini, Claude, Codex CLIs (verified packages)
+RUN npm install -g \
+      @google/gemini-cli \
+      @anthropic-ai/claude-code \
+      @openai/codex
 
 WORKDIR /app
 
