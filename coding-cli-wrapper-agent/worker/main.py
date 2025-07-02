@@ -53,13 +53,8 @@ def main():
         task = Task(**task_data)
         task_id = task.id
         
-        # load the instructions from the markdown file
-        SPEC_FILE = Path("/opt/worker/task_instructions.md")
-        if SPEC_FILE.exists():
-            task.instructions = SPEC_FILE.read_text().strip()
-            log("Loaded instructions from markdown file")
-        else:
-            log("No markdown instruction file found, using original instructions")
+        # Instructions are now loaded by API from mounted file and passed via TASK_JSON
+        log("Using instructions passed from API")
         
         log(f"Processing task {task_id}")
         log(f"Repository: {task.repo}")

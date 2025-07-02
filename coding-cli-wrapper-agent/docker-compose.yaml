@@ -17,6 +17,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - .:/workspace
+      - ./task_instructions.md:/tasks/task_instructions.md:ro   # read task file
     profiles: ["api"]
 
   redis:

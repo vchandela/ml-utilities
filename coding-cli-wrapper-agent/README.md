@@ -8,9 +8,32 @@ Complete end-to-end workflow working:
 - ✅ API accepts tasks → Worker spawns → Code applied → Tests run → PR created
 - ✅ GitHub authentication for private repositories  
 - ✅ Redis state management with real-time progress tracking  
+- ✅ **File-mounted instructions**: Auto-load task instructions from `task_instructions.md`
 - ✅ **Gemini Engine**: Working with Gemini-2.5-Pro model and auto-approval (`-y` flag)
 - ✅ **Codex Engine**: Working with O3 model and full automation (`--full-auto` flag)
 - ✅ **Claude Engine**: Working with Opus model and enhanced tool permissions
+
+## 📝 Quick Start: File-Mounted Instructions
+
+The recommended approach uses a simple file-based workflow:
+
+```bash
+# 1. Write your task instructions  
+echo "• Add comprehensive error handling
+• Implement input validation
+• Add unit tests for new functions
+• Update API documentation" > task_instructions.md
+
+# 2. Submit task (auto-loads instructions from file)
+curl -X POST http://localhost:8000/tasks \
+  -H 'Content-Type: application/json' \
+  -d '{"repo":"https://github.com/your-org/repo", "engine":"gemini"}'
+
+# 3. Monitor progress  
+curl http://localhost:8000/tasks/{task_id}
+```
+
+**Key advantages:** Clean API calls, live instruction updates, no JSON payload limits.
 
 ## 🚀 Quick Setup
 
@@ -41,13 +64,28 @@ curl http://localhost:8000/health
 ```
 
 ### 3. Submit Task
+
+**Option 1: File-mounted instructions (Recommended)**
+```bash
+# 1. Write task instructions
+echo "• Add comprehensive error handling
+• Implement input validation  
+• Update documentation" > task_instructions.md
+
+# 2. Submit task (no instructions field needed)
+curl -X POST http://localhost:8000/tasks \
+  -H 'Content-Type: application/json' \
+  -d '{"repo":"https://github.com/your-org/repo", "engine":"gemini"}'
+```
+
+**Option 2: Inline instructions**
 ```bash
 curl -X POST http://localhost:8000/tasks \
   -H 'Content-Type: application/json' \
   -d '{"repo":"https://github.com/your-org/repo", "instructions":"Add error handling"}'
-
-# Returns: {"task_id":"uuid","status":"queued"}
 ```
+
+Both return: `{"task_id":"uuid","status":"queued"}`
 
 ### 4. Monitor Progress
 ```bash
@@ -61,6 +99,18 @@ watch -n 2 'curl -s http://localhost:8000/tasks/{task_id} | jq'
 ## 📋 API
 
 ### POST /tasks
+
+**File-mounted approach (recommended):**
+```json
+{
+  "repo": "https://github.com/owner/repo",
+  "branch_base": "main",     // optional  
+  "engine": "gemini"         // optional: gemini, claude, codex
+}
+```
+*Instructions auto-loaded from `task_instructions.md`*
+
+**Inline instructions approach:**
 ```json
 {
   "repo": "https://github.com/owner/repo",
@@ -91,41 +141,49 @@ watch -n 2 'curl -s http://localhost:8000/tasks/{task_id} | jq'
 
 ## 💡 Examples
 
+### File-mounted Instructions (Recommended)
+
 ```bash
-# Test Gemini engine (✅ Verified - creates PRs successfully)
+# 1. Write task instructions
+echo "• Append the word 'claude-codex-test' at the end of README.md file
+• Add a comment that says 'This was added via file-mounted instructions'" > task_instructions.md
+
+# 2. Test with different engines (✅ All verified - create PRs successfully)
+
+# Gemini engine  
 curl -X POST http://localhost:8000/tasks \
   -H 'Content-Type: application/json' \
-  -d '{
-    "repo": "https://github.com/pavoai/intern",
-    "instructions": "Append the word \"gemini\" at the end of README.md file",
-    "engine": "gemini"
-  }'
+  -d '{"repo": "https://github.com/pavoai/intern", "engine": "gemini"}'
 
-# Test Codex engine with O3 model (✅ Verified - creates PRs successfully)
+# Claude engine
 curl -X POST http://localhost:8000/tasks \
   -H 'Content-Type: application/json' \
-  -d '{
-    "repo": "https://github.com/pavoai/intern",
-    "instructions": "Append the word \"codex-test\" at the end of README.md file",
-    "engine": "codex"
-  }'
+  -d '{"repo": "https://github.com/pavoai/intern", "engine": "claude"}'
 
-# Test Claude engine with Opus model (✅ Verified - creates PRs successfully)
+# Codex engine  
 curl -X POST http://localhost:8000/tasks \
   -H 'Content-Type: application/json' \
-  -d '{
-    "repo": "https://github.com/pavoai/intern",
-    "instructions": "Append the word \"claude-test\" at the end of README.md file",
-    "engine": "claude"
-  }'
+  -d '{"repo": "https://github.com/pavoai/intern", "engine": "codex"}'
 
-# Custom private repository
+# Private repository with custom branch
 curl -X POST http://localhost:8000/tasks \
   -H 'Content-Type: application/json' \
   -d '{
     "repo": "https://github.com/myorg/private-repo",
-    "instructions": "Add comprehensive input validation and security checks",
     "branch_base": "develop", 
+    "engine": "gemini"
+  }'
+```
+
+### Inline Instructions (Alternative)
+
+```bash
+# Direct instruction passing (no file needed)
+curl -X POST http://localhost:8000/tasks \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "repo": "https://github.com/pavoai/intern",
+    "instructions": "Add comprehensive input validation and security checks",
     "engine": "gemini"
   }'
 ```
@@ -163,3 +221,51 @@ docker compose down && COMPOSE_PROFILES=api docker compose up -d
 - `running` → Worker processing with timestamps
 - `done` → Completed successfully with PR URL
 - `failed` → Error occurred (check error field in Redis)
+
+## 🔮 Architecture & Future Improvements
+
+### Current Architecture: File-Mounted Instructions
+The system supports both inline and file-mounted instruction approaches:
+
+**File-Mounted Workflow (Recommended):**
+1. **Host File**: User/agent writes to `task_instructions.md` in project root
+2. **API Mount**: File mounted read-only at `/tasks/task_instructions.md` in API container  
+3. **Auto-Loading**: API automatically reads file content when `instructions` field is empty
+4. **Worker Execution**: Instructions passed to worker via environment variables (no file sharing)
+5. **Live Updates**: Changes to host file immediately available to new tasks
+
+**Key Benefits:**
+- ✅ **Simple API calls** - No large instruction payloads in JSON
+- ✅ **Live updates** - Change instructions without rebuilding containers
+- ✅ **Clean separation** - File management separate from API calls
+- ✅ **Ephemeral workers** - No file mounts or cleanup needed in worker containers
+
+**Example workflow:**
+```bash
+# 1. Update instructions (live updates)
+echo "• Fix authentication bug
+• Add rate limiting  
+• Update tests" > task_instructions.md
+
+# 2. Submit task (auto-loads from file)
+curl -X POST http://localhost:8000/tasks \
+  -d '{"repo":"https://github.com/myorg/repo","engine":"gemini"}' \
+  -H 'Content-Type: application/json'
+```
+
+### Future Enhancements
+
+#### Multi-File Support
+- **Directory Mount**: Mount `task_files/` directory with multiple `.md` files  
+- **Dynamic Selection**: API endpoint parameter to specify which file to use
+- **Use Case**: Multiple task templates or concurrent task types
+
+#### Advanced File Management
+- **Auto-cleanup**: Clear `task_instructions.md` after successful PR creation
+- **Task History**: Archive completed instructions with task IDs for tracking  
+- **Validation**: Pre-validate instruction syntax before task submission
+
+#### High-Throughput Optimizations
+- **Shared Volume**: Mount same volume in worker for very large instruction files
+- **Instruction Caching**: Cache frequently-used instruction templates
+- **Batch Processing**: Process multiple tasks with same instructions simultaneously

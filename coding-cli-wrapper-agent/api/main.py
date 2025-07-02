@@ -50,9 +50,10 @@ async def create_task(task: Task) -> TaskResponse:
     
     Atomic logic:
     1. Validate incoming JSON against Task model and assign task_id
-    2. HSET task:{id} state=queued in Redis
-    3. Spawn worker container
-    4. Return 202 Accepted {"task_id": id}
+    2. Read instructions from file if instructions_file is provided
+    3. HSET task:{id} state=queued in Redis
+    4. Spawn worker container
+    5. Return 202 Accepted {"task_id": id}
     """
     
     # 1. Validate and assign task_id
@@ -60,6 +61,17 @@ async def create_task(task: Task) -> TaskResponse:
         task.id = str(uuid.uuid4())
     
     task_id = task.id
+    
+    # 2. Auto-load instructions from mounted file if instructions is empty
+    if not task.instructions:
+        instructions_file_path = "/tasks/task_instructions.md"
+        try:
+            with open(instructions_file_path, 'r', encoding='utf-8') as f:
+                task.instructions = f.read().strip()
+            print(f"DEBUG: Auto-loaded instructions from {instructions_file_path}: {task.instructions[:100]}...")
+        except Exception as e:
+            print(f"ERROR: Failed to read instructions from {instructions_file_path}: {e}")
+            raise HTTPException(status_code=400, detail=f"No instructions provided and failed to read from mounted file: {str(e)}")
     
     # Check Redis connection
     if not redis_client:

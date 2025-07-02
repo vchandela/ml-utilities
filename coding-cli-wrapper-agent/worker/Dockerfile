@@ -24,10 +24,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy shared models
 COPY models.py .
 
-# ship the instruction file
-COPY task_instructions.md /opt/worker/task_instructions.md
-
-# Copy worker source code (will be created in later steps)
+# Copy worker source code
 COPY worker/ .
 
 # Run worker
