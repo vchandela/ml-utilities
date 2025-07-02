@@ -273,9 +273,14 @@ def main():
                     repo_path = repo_path[:-4]
                 owner, repo_name = repo_path.split("/")
                 
+                # Create descriptive PR title from first 6 words of instructions
+                import re
+                words = re.findall(r'\w+', task.instructions.lower())[:6]
+                instruction_slug = ' '.join(words).title() if words else 'Task'
+                
                 # Create PR
                 pr_data = {
-                    "title": f"feat: {task.instructions}",
+                    "title": f"feat({task.engine}): {instruction_slug}",
                     "body": f"Automated changes by Pavo Coding Agent.\n\nTask ID: {task_id}\nEngine: {task.engine}\n\nInstructions: {task.instructions}",
                     "head": branch_name,
                     "base": task.branch_base

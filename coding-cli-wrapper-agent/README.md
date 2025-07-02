@@ -272,5 +272,5 @@ curl -X POST http://localhost:8000/tasks \
 
 ## ✅ TODO
 
-1. **Remove engine from branch name** - Simplify branch naming back to `pavo-coding-agent/{task_id}`
+1. **Remove engine from branch name and PR title** - Simplify branch naming back to `pavo-coding-agent/{task_id}`. ALso, fix PR title.
 2. **Make worker containers ephemeral** - Ensure complete cleanup and removal after task completion
