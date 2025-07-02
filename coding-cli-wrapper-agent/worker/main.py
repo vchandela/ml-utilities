@@ -135,24 +135,21 @@ def main():
             log(f"Applying {task.engine} engine...")
             
             if task.engine == CodeEngine.gemini:
-                # Gemini CLI with direct prompt and auto-accept changes
-                cmd = ["gemini", "--prompt", task.instructions, "--yolo"]
+                cmd = ["gemini", "--model", "gemini-2.5-pro", "-y", "--show_memory_usage", "-d", "-p", task.instructions]
                 if not os.getenv("GEMINI_API_KEY"):
                     log("ERROR: GEMINI_API_KEY environment variable not provided")
                     redis_client.hset(task_key, "state", "failed")
                     redis_client.hset(task_key, "error", "GEMINI_API_KEY not provided")
                     sys.exit(1)
             elif task.engine == CodeEngine.claude:
-                # Claude Code non-interactive mode with direct prompt
-                cmd = ["claude", "--quiet", "--prompt", task.instructions]
+                cmd = ["claude", "--model=opus", "-d", "--allowedTools", "Bash,Edit,MultiEdit,NotebookEdit,WebFetch,WebSearch,Write", "-p", task.instructions]
                 if not os.getenv("ANTHROPIC_API_KEY"):
                     log("ERROR: ANTHROPIC_API_KEY environment variable not provided")
                     redis_client.hset(task_key, "state", "failed")
                     redis_client.hset(task_key, "error", "ANTHROPIC_API_KEY not provided")
                     sys.exit(1)
             else:  # codex
-                # Codex with GPT-4.1 model and full automation (o3 requires org verification)
-                cmd = ["codex", "--quiet", "--model", "gpt-4.1", "--full-auto", task.instructions]
+                cmd = ["codex", "--model", "o3", "--full-auto", "--full-stdout", "-q", task.instructions]
                 if not os.getenv("OPENAI_API_KEY"):
                     log("ERROR: OPENAI_API_KEY environment variable not provided")
                     redis_client.hset(task_key, "state", "failed")

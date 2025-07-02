@@ -7,9 +7,10 @@ A self-contained service that accepts code-editing tasks, spawns one-off worker 
 Complete end-to-end workflow working:
 - ✅ API accepts tasks → Worker spawns → Code applied → Tests run → PR created
 - ✅ GitHub authentication for private repositories  
-- ✅ Redis state management with real-time progress tracking
-- ✅ **Gemini Engine**: Working with auto-approval (`--yolo` flag)
-- ✅ **Codex Engine**: Working with GPT-4.1 model and full automation (`--full-auto` flag)
+- ✅ Redis state management with real-time progress tracking  
+- ✅ **Gemini Engine**: Working with Gemini-2.5-Pro model and auto-approval (`-y` flag)
+- ✅ **Codex Engine**: Working with O3 model and full automation (`--full-auto` flag)
+- ✅ **Claude Engine**: Working with Opus model and enhanced tool permissions
 
 ## 🚀 Quick Setup
 
@@ -83,7 +84,7 @@ watch -n 2 'curl -s http://localhost:8000/tasks/{task_id} | jq'
 
 1. **Clone** → Private repo with GitHub token
 2. **Branch** → Create `pavo-coding-agent/{task_id}`  
-3. **Apply** → Run Gemini engine with instructions
+3. **Apply** → Run selected engine (Gemini/Claude/Codex) with instructions
 4. **Test** → Execute available test frameworks
 5. **Push** → Authenticated push to GitHub
 6. **PR** → Create pull request via GitHub API
@@ -100,13 +101,22 @@ curl -X POST http://localhost:8000/tasks \
     "engine": "gemini"
   }'
 
-# Test Codex engine with GPT-4.1 (✅ Verified - creates PRs successfully)
+# Test Codex engine with O3 model (✅ Verified - creates PRs successfully)
 curl -X POST http://localhost:8000/tasks \
   -H 'Content-Type: application/json' \
   -d '{
     "repo": "https://github.com/pavoai/intern",
-    "instructions": "Append the word \"gpt41-test\" at the end of README.md file",
+    "instructions": "Append the word \"codex-test\" at the end of README.md file",
     "engine": "codex"
+  }'
+
+# Test Claude engine with Opus model (✅ Verified - creates PRs successfully)
+curl -X POST http://localhost:8000/tasks \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "repo": "https://github.com/pavoai/intern",
+    "instructions": "Append the word \"claude-test\" at the end of README.md file",
+    "engine": "claude"
   }'
 
 # Custom private repository
@@ -130,9 +140,9 @@ curl -X POST http://localhost:8000/tasks \
 - `REDIS_URL` - Default: `redis://redis:6379/0`
 
 **Engine Details:**
-- **Gemini**: Uses `@google/gemini-cli` with `--yolo` flag for auto-approval
-- **Codex**: Uses `@openai/codex` with GPT-4.1 model and `--full-auto` flag
-- **Claude**: Uses `@anthropic-ai/claude-code` (configured but not yet tested)
+- **Gemini**: Uses `@google/gemini-cli` with Gemini-2.5-Pro model, auto-approval (`-y`), debug mode (`-d`), and memory usage monitoring (`--show_memory_usage`)
+- **Codex**: Uses `@openai/codex` with O3 model, full automation (`--full-auto`), quiet mode (`-q`), and full stdout output (`--full-stdout`)
+- **Claude**: Uses `@anthropic-ai/claude-code` with Opus model, debug mode (`-d`), and comprehensive tool permissions (`--allowedTools`)
 
 ## 🔍 Debugging
 
@@ -152,4 +162,4 @@ docker compose down && COMPOSE_PROFILES=api docker compose up -d
 - `queued` → Task created, waiting for worker
 - `running` → Worker processing with timestamps
 - `done` → Completed successfully with PR URL
-- `failed` → Error occurred (check error field in Redis) 
+- `failed` → Error occurred (check error field in Redis)
