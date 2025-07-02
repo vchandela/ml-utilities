@@ -269,3 +269,8 @@ curl -X POST http://localhost:8000/tasks \
 - **Shared Volume**: Mount same volume in worker for very large instruction files
 - **Instruction Caching**: Cache frequently-used instruction templates
 - **Batch Processing**: Process multiple tasks with same instructions simultaneously
+
+## ✅ TODO
+
+1. **Remove engine from branch name** - Simplify branch naming back to `pavo-coding-agent/{task_id}`
+2. **Make worker containers ephemeral** - Ensure complete cleanup and removal after task completion

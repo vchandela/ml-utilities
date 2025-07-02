@@ -107,7 +107,7 @@ def main():
             log("Repository cloned successfully")
             
             # Create and checkout branch
-            branch_name = f"pavo-coding-agent/{task_id}"
+            branch_name = f"pavo-coding-agent/{task.engine}/{task_id}"
             os.chdir(repo_dir)
             
             # Checkout base branch first
