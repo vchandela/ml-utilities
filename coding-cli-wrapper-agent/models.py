@@ -9,7 +9,7 @@ class CodeEngine(str, Enum):
 class Task(BaseModel):
     id: str | None = None
     repo: HttpUrl
-    instructions: str
+    instructions: str = ""  # Default empty - will be loaded from markdown file
     branch_base: str = "main"
     engine: CodeEngine = CodeEngine.gemini  # default to Gemini CLI
     callback_url: HttpUrl | None = None 
