@@ -1,2 +1,1 @@
-• Append the word "temp-test" at the end of README.md file
-• Add a comment that says "This was added via file-mounted instructions using Claude/Codex engines"
+task: We just release the v2 version of search service API, thus change all the endpoints to /api/v2 and then also make sure to change the README as well

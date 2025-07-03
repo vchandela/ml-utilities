@@ -15,6 +15,8 @@ RUN npm install -g \
       @anthropic-ai/claude-code \
       @openai/codex
 
+RUN npm install -g @sourcegraph/amp
+
 WORKDIR /app
 
 # Copy requirements and install dependencies
