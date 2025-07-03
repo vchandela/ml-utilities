@@ -6,6 +6,7 @@ import tempfile
 import shutil
 from pathlib import Path
 import time
+import shlex
 
 import redis
 import requests
@@ -152,6 +153,13 @@ def main():
                     redis_client.hset(task_key, "state", "failed")
                     redis_client.hset(task_key, "error", "ANTHROPIC_API_KEY not provided")
                     sys.exit(1)
+            elif task.engine == CodeEngine.amp:
+                if not os.getenv("AMP_API_KEY"):
+                    log("ERROR: AMP_API_KEY environment variable not provided")
+                    redis_client.hset(task_key, "state", "failed")
+                    redis_client.hset(task_key, "error", "AMP_API_KEY not provided")
+                    sys.exit(1)
+                cmd = ["bash", "-c", f"echo {shlex.quote(task.instructions)} | amp --dangerously-allow-all --log-level debug"]
             else:  # codex
                 cmd = ["codex", "--model", "o3", "--full-auto", "--full-stdout", "-q", task.instructions]
                 if not os.getenv("OPENAI_API_KEY"):

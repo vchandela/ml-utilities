@@ -5,6 +5,7 @@ class CodeEngine(str, Enum):
     gemini = "gemini"   # default
     claude = "claude"
     codex  = "codex"
+    amp    = "amp"
 
 class Task(BaseModel):
     id: str | None = None
