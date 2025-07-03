@@ -136,16 +136,17 @@ def main():
             
             # 3. Apply engine
             log(f"Applying {task.engine} engine...")
+            engine_start_time = time.time()
             
             if task.engine == CodeEngine.gemini:
-                cmd = ["gemini", "--model", "gemini-2.5-pro", "-y", "--show_memory_usage", "-d", "-p", task.instructions]
+                cmd = ["gemini", "-y", "--show_memory_usage", "-d", "-p", task.instructions]
                 if not os.getenv("GEMINI_API_KEY"):
                     log("ERROR: GEMINI_API_KEY environment variable not provided")
                     redis_client.hset(task_key, "state", "failed")
                     redis_client.hset(task_key, "error", "GEMINI_API_KEY not provided")
                     sys.exit(1)
             elif task.engine == CodeEngine.claude:
-                cmd = ["claude", "--model=opus", "-d", "--allowedTools", "Bash,Edit,MultiEdit,NotebookEdit,WebFetch,WebSearch,Write", "-p", task.instructions]
+                cmd = ["claude", "-d", "--allowedTools", "Bash,Edit,MultiEdit,NotebookEdit,WebFetch,WebSearch,Write", "-p", task.instructions]
                 if not os.getenv("ANTHROPIC_API_KEY"):
                     log("ERROR: ANTHROPIC_API_KEY environment variable not provided")
                     redis_client.hset(task_key, "state", "failed")
@@ -163,7 +164,9 @@ def main():
                 log(f"Running engine command: {' '.join(cmd)}")
                 # CLI tools automatically inherit environment variables from container
                 subprocess.check_call(cmd, cwd=repo_dir)
-                log(f"Successfully applied {task.engine} engine")
+                engine_end_time = time.time()
+                engine_duration = engine_end_time - engine_start_time
+                log(f"Successfully applied {task.engine} engine. Engine took {engine_duration:.2f} seconds")
             except subprocess.CalledProcessError as e:
                 log(f"ERROR: {task.engine} engine failed: {e}")
                 redis_client.hset(task_key, "state", "failed")

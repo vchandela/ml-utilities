@@ -31,9 +31,10 @@ curl -X POST http://localhost:8000/tasks \
 
 # 3. Monitor progress  
 curl http://localhost:8000/tasks/{task_id}
+# Returns enhanced status: ⏳ QUEUED → 🔄 PROCESSING... → ✅ COMPLETED SUCCESSFULLY
 ```
 
-**Key advantages:** Clean API calls, live instruction updates, no JSON payload limits.
+**Key advantages:** Clean API calls, live instruction updates, no JSON payload limits, enhanced status tracking.
 
 ## 🚀 Quick Setup
 
@@ -43,12 +44,6 @@ curl http://localhost:8000/tasks/{task_id}
 cp env.example .env
 
 # Add required credentials
-cat >> .env << EOF
-GITHUB_TOKEN=ghp_your_token_here
-GEMINI_API_KEY=your_gemini_api_key
-OPENAI_API_KEY=your_openai_api_key
-ANTHROPIC_API_KEY=your_anthropic_api_key
-EOF
 ```
 
 ### 2. Launch System
@@ -121,23 +116,62 @@ watch -n 2 'curl -s http://localhost:8000/tasks/{task_id} | jq'
 ```
 
 ### GET /tasks/{task_id}
+
+**Successful completion:**
 ```json
 {
+  "task_id": "uuid",
   "state": "done",
+  "status": "✅ COMPLETED SUCCESSFULLY",
   "pr_url": "https://github.com/owner/repo/pull/123",
-  "started_at": "1751369960",
-  "completed_at": "1751369969"
+  "github_pr": "https://github.com/owner/repo/pull/123",
+  "created_at": "1751369960",
+  "started_at": "1751369962",
+  "completed_at": "1751369969",
+  "test_status": "passed",
+  "instructions": "Your task instructions...",
+  "repo": "https://github.com/owner/repo",
+  "engine": "gemini"
+}
+```
+
+**While processing:**
+```json
+{
+  "task_id": "uuid",
+  "state": "running",
+  "status": "🔄 PROCESSING...",
+  "created_at": "1751369960",
+  "started_at": "1751369962",
+  "instructions": "Your task instructions...",
+  "repo": "https://github.com/owner/repo",
+  "engine": "gemini"
+}
+```
+
+**If failed:**
+```json
+{
+  "task_id": "uuid",
+  "state": "failed",
+  "status": "❌ FAILED",
+  "error": "Error details...",
+  "created_at": "1751369960",
+  "started_at": "1751369962",
+  "instructions": "Your task instructions...",
+  "repo": "https://github.com/owner/repo",
+  "engine": "gemini"
 }
 ```
 
 ## 🔄 Worker Flow
 
 1. **Clone** → Private repo with GitHub token
-2. **Branch** → Create `pavo-coding-agent/{task_id}`  
+2. **Branch** → Create `pavo-coding-agent/{engine}/{task_id}`  
 3. **Apply** → Run selected engine (Gemini/Claude/Codex) with instructions
-4. **Test** → Execute available test frameworks
+4. **Test** → Execute available test frameworks (pytest, npm test, make test, etc.)
 5. **Push** → Authenticated push to GitHub
-6. **PR** → Create pull request via GitHub API
+6. **PR** → Create pull request via GitHub API with detailed task information
 
 ## 💡 Examples
 
@@ -193,9 +227,11 @@ curl -X POST http://localhost:8000/tasks \
 **Required in `.env`:**
 - `GITHUB_TOKEN` - Personal access token with repo permissions
 - `GEMINI_API_KEY` - Google Gemini API key (for `engine: "gemini"`)
-- `OPENAI_API_KEY` - OpenAI API key (for `engine: "codex"`)
+- `GEMINI_MODEL` - Gemini model to use (default: `gemini-2.5-pro`)
 - `ANTHROPIC_API_KEY` - Anthropic API key (for `engine: "claude"`)
-- `REDIS_URL` - Default: `redis://redis:6379/0`
+- `ANTHROPIC_MODEL` - Claude model to use (default: `claude-3-5-sonnet-20241022`)
+- `OPENAI_API_KEY` - OpenAI API key (for `engine: "codex"`)
+- `REDIS_URL` - Redis connection URL (default: `redis://redis:6379/0`)
 
 **Engine Details:**
 - **Gemini**: Uses `@google/gemini-cli` with Gemini-2.5-Pro model, auto-approval (`-y`), debug mode (`-d`), and memory usage monitoring (`--show_memory_usage`)
@@ -205,11 +241,18 @@ curl -X POST http://localhost:8000/tasks \
 ## 🔍 Debugging
 
 ```bash
+# Check system health (enhanced endpoint)
+curl http://localhost:8000/health
+# Returns: {"status":"healthy","redis":{"status":"connected","details":"ping successful","url":"redis://redis:6379/0"},"github_token_configured":true}
+
 # API logs
 docker compose logs agent-b-api -f
 
 # Redis inspection
 docker compose exec redis redis-cli HGETALL task:{task_id}
+
+# Task status with detailed response
+curl http://localhost:8000/tasks/{task_id} | jq
 
 # Clean restart
 docker compose down && COMPOSE_PROFILES=api docker compose up -d
@@ -217,10 +260,10 @@ docker compose down && COMPOSE_PROFILES=api docker compose up -d
 
 ## 📊 Task States
 
-- `queued` → Task created, waiting for worker
-- `running` → Worker processing with timestamps
-- `done` → Completed successfully with PR URL
-- `failed` → Error occurred (check error field in Redis)
+- `queued` → ⏳ **QUEUED** - Task created, waiting for worker
+- `running` → 🔄 **PROCESSING...** - Worker processing with timestamps
+- `done` → ✅ **COMPLETED SUCCESSFULLY** - Completed successfully with PR URL
+- `failed` → ❌ **FAILED** - Error occurred (check error field in response)
 
 ## 🔮 Architecture & Future Improvements
 
