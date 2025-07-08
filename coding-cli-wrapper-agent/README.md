@@ -12,6 +12,7 @@ Complete end-to-end workflow working:
 - ✅ **Gemini Engine**: Working with Gemini-2.5-Pro model and auto-approval (`-y` flag)
 - ✅ **Codex Engine**: Working with O3 model and full automation (`--full-auto` flag)
 - ✅ **Claude Engine**: Working with Opus model and enhanced tool permissions
+- ✅ **AMP Engine**: Working with Sourcegraph AMP and dangerous permissions (`--dangerously-allow-all` flag)
 
 ## 📝 Quick Start: File-Mounted Instructions
 
@@ -100,7 +101,7 @@ watch -n 2 'curl -s http://localhost:8000/tasks/{task_id} | jq'
 {
   "repo": "https://github.com/owner/repo",
   "branch_base": "main",     // optional  
-  "engine": "gemini"         // optional: gemini, claude, codex
+  "engine": "gemini"         // optional: gemini, claude, codex, amp
 }
 ```
 *Instructions auto-loaded from `task_instructions.md`*
@@ -111,7 +112,7 @@ watch -n 2 'curl -s http://localhost:8000/tasks/{task_id} | jq'
   "repo": "https://github.com/owner/repo",
   "instructions": "Your coding task description",
   "branch_base": "main",     // optional
-  "engine": "gemini"         // optional: gemini, claude, codex
+  "engine": "gemini"         // optional: gemini, claude, codex, amp
 }
 ```
 
@@ -168,7 +169,7 @@ watch -n 2 'curl -s http://localhost:8000/tasks/{task_id} | jq'
 
 1. **Clone** → Private repo with GitHub token
 2. **Branch** → Create `pavo-coding-agent/{engine}/{task_id}`  
-3. **Apply** → Run selected engine (Gemini/Claude/Codex) with instructions
+3. **Apply** → Run selected engine (Gemini/Claude/Codex/AMP) with instructions
 4. **Test** → Execute available test frameworks (pytest, npm test, make test, etc.)
 5. **Push** → Authenticated push to GitHub
 6. **PR** → Create pull request via GitHub API with detailed task information
@@ -198,6 +199,11 @@ curl -X POST http://localhost:8000/tasks \
 curl -X POST http://localhost:8000/tasks \
   -H 'Content-Type: application/json' \
   -d '{"repo": "https://github.com/pavoai/intern", "engine": "codex"}'
+
+# AMP engine
+curl -X POST http://localhost:8000/tasks \
+  -H 'Content-Type: application/json' \
+  -d '{"repo": "https://github.com/pavoai/intern", "engine": "amp"}'
 
 # Private repository with custom branch
 curl -X POST http://localhost:8000/tasks \
@@ -231,12 +237,14 @@ curl -X POST http://localhost:8000/tasks \
 - `ANTHROPIC_API_KEY` - Anthropic API key (for `engine: "claude"`)
 - `ANTHROPIC_MODEL` - Claude model to use (default: `claude-3-5-sonnet-20241022`)
 - `OPENAI_API_KEY` - OpenAI API key (for `engine: "codex"`)
+- `AMP_API_KEY` - Sourcegraph AMP API key (for `engine: "amp"`)
 - `REDIS_URL` - Redis connection URL (default: `redis://redis:6379/0`)
 
 **Engine Details:**
 - **Gemini**: Uses `@google/gemini-cli` with Gemini-2.5-Pro model, auto-approval (`-y`), debug mode (`-d`), and memory usage monitoring (`--show_memory_usage`)
 - **Codex**: Uses `@openai/codex` with O3 model, full automation (`--full-auto`), quiet mode (`-q`), and full stdout output (`--full-stdout`)
 - **Claude**: Uses `@anthropic-ai/claude-code` with Opus model, debug mode (`-d`), and comprehensive tool permissions (`--allowedTools`)
+- **AMP**: Uses `@sourcegraph/amp` with dangerous permissions (`--dangerously-allow-all`) and debug logging (`--log-level debug`)
 
 ## 🔍 Debugging
 
