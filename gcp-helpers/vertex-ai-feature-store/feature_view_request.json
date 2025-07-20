@@ -1,0 +1,13 @@
+{
+    "feature_registry_source": {
+      "feature_groups": [
+        {
+          "feature_group_id": "pipeline_output_fg",
+          "feature_ids": [ "distinct_event_types" ]
+        }
+      ]
+    },
+    "sync_config": {
+      "cron": "0 0 * * *"
+    }
+  }
