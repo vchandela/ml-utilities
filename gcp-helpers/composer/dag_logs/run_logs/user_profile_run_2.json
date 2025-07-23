@@ -1,0 +1,454 @@
+{
+  "summary": {
+    "final_status": "dag_succeeded",
+    "task_states": {
+      "calculate_distinct_events": "SUCCESS"
+    }
+  },
+  "logs": [
+    {
+      "timestamp": "2025-07-23T10:21:39.218579+00:00",
+      "severity": "INFO",
+      "payload": "\t<TaskInstance: user_feature_store_ingestion_dag_7.calculate_distinct_events manual__2025-07-23T10:21:38.308427+00:00 [scheduled]>",
+      "log_name": "projects/ml-tool-playground/logs/airflow-scheduler",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:21:39.220025+00:00",
+      "severity": "INFO",
+      "payload": "DAG user_feature_store_ingestion_dag_7 has 0/100 running and queued tasks",
+      "log_name": "projects/ml-tool-playground/logs/airflow-scheduler",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:21:39.222894+00:00",
+      "severity": "INFO",
+      "payload": "\t<TaskInstance: user_feature_store_ingestion_dag_7.calculate_distinct_events manual__2025-07-23T10:21:38.308427+00:00 [scheduled]>",
+      "log_name": "projects/ml-tool-playground/logs/airflow-scheduler",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:21:39.229036+00:00",
+      "severity": "INFO",
+      "payload": "Trying to enqueue tasks: [<TaskInstance: user_feature_store_ingestion_dag_7.calculate_distinct_events manual__2025-07-23T10:21:38.308427+00:00 [scheduled]>] for executor: CeleryKubernetesExecutor(parallelism=2000)",
+      "log_name": "projects/ml-tool-playground/logs/airflow-scheduler",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:21:39.230191+00:00",
+      "severity": "INFO",
+      "payload": "Sending TaskInstanceKey(dag_id='user_feature_store_ingestion_dag_7', task_id='calculate_distinct_events', run_id='manual__2025-07-23T10:21:38.308427+00:00', try_number=1, map_index=-1) to CeleryKubernetesExecutor with priority 2 and queue default",
+      "log_name": "projects/ml-tool-playground/logs/airflow-scheduler",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:21:39.231240+00:00",
+      "severity": "INFO",
+      "payload": "Adding to queue: ['airflow', 'tasks', 'run', 'user_feature_store_ingestion_dag_7', 'calculate_distinct_events', 'manual__2025-07-23T10:21:38.308427+00:00', '--local', '--subdir', 'DAGS_FOLDER/user_feature_store_ingestion_dag_7.py']",
+      "log_name": "projects/ml-tool-playground/logs/airflow-scheduler",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:21:39.242356+00:00",
+      "severity": "INFO",
+      "payload": "Received executor event with state queued for task instance TaskInstanceKey(dag_id='user_feature_store_ingestion_dag_7', task_id='calculate_distinct_events', run_id='manual__2025-07-23T10:21:38.308427+00:00', try_number=1, map_index=-1)",
+      "log_name": "projects/ml-tool-playground/logs/airflow-scheduler",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:21:39.247660+00:00",
+      "severity": "INFO",
+      "payload": "[7809f0a3-0418-458b-83b8-8cb414b12ff3] Executing command in Celery: ['airflow', 'tasks', 'run', 'user_feature_store_ingestion_dag_7', 'calculate_distinct_events', 'manual__2025-07-23T10:21:38.308427+00:00', '--local', '--subdir', 'DAGS_FOLDER/user_feature_store_ingestion_dag_7.py']",
+      "log_name": "projects/ml-tool-playground/logs/airflow-worker",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:21:39.260930+00:00",
+      "severity": "INFO",
+      "payload": "Setting external_id for <TaskInstance: user_feature_store_ingestion_dag_7.calculate_distinct_events manual__2025-07-23T10:21:38.308427+00:00 [queued]> to 7809f0a3-0418-458b-83b8-8cb414b12ff3",
+      "log_name": "projects/ml-tool-playground/logs/airflow-scheduler",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:21:39.587136+00:00",
+      "severity": "INFO",
+      "payload": "Filling up the DagBag from /home/airflow/gcs/dags/user_feature_store_ingestion_dag_7.py",
+      "log_name": "projects/ml-tool-playground/logs/airflow-worker",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:21:47.228571+00:00",
+      "severity": "INFO",
+      "payload": "Running <TaskInstance: user_feature_store_ingestion_dag_7.calculate_distinct_events manual__2025-07-23T10:21:38.308427+00:00 [queued]> on host airflow-worker-bcjfh",
+      "log_name": "projects/ml-tool-playground/logs/airflow-worker",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:21:47.357190+00:00",
+      "severity": "INFO",
+      "payload": "Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: user_feature_store_ingestion_dag_7.calculate_distinct_events manual__2025-07-23T10:21:38.308427+00:00 [queued]>",
+      "log_name": "projects/ml-tool-playground/logs/airflow-worker",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:21:47.373935+00:00",
+      "severity": "INFO",
+      "payload": "Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: user_feature_store_ingestion_dag_7.calculate_distinct_events manual__2025-07-23T10:21:38.308427+00:00 [queued]>",
+      "log_name": "projects/ml-tool-playground/logs/airflow-worker",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:21:47.446089+00:00",
+      "severity": "INFO",
+      "payload": "Running: ['airflow', 'tasks', 'run', 'user_feature_store_ingestion_dag_7', 'calculate_distinct_events', 'manual__2025-07-23T10:21:38.308427+00:00', '--job-id', '684', '--raw', '--subdir', 'DAGS_FOLDER/user_feature_store_ingestion_dag_7.py', '--cfg-path', '/tmp/tmpiz3aqga4']",
+      "log_name": "projects/ml-tool-playground/logs/airflow-worker",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:21:47.577746+00:00",
+      "severity": "INFO",
+      "payload": "Running <TaskInstance: user_feature_store_ingestion_dag_7.calculate_distinct_events manual__2025-07-23T10:21:38.308427+00:00 [running]> on host airflow-worker-bcjfh",
+      "log_name": "projects/ml-tool-playground/logs/airflow-worker",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:21:47.859430+00:00",
+      "severity": "INFO",
+      "payload": "Exporting env vars: AIRFLOW_CTX_DAG_OWNER='SysAI Data Pipeline Agent' AIRFLOW_CTX_DAG_ID='user_feature_store_ingestion_dag_7' AIRFLOW_CTX_TASK_ID='calculate_distinct_events' AIRFLOW_CTX_EXECUTION_DATE='2025-07-23T10:21:38.308427+00:00' AIRFLOW_CTX_TRY_NUMBER='1' AIRFLOW_CTX_DAG_RUN_ID='manual__2025-07-23T10:21:38.308427+00:00'",
+      "log_name": "projects/ml-tool-playground/logs/airflow-worker",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:21:48.010827+00:00",
+      "severity": "INFO",
+      "payload": "Inserting job airflow_user_feature_store_ingestion_dag_7_calculate_distinct_events_2025_07_23T10_21_38_308427_00_00_1f4bada900bf84ba4be9f6e27ba5c9a1",
+      "log_name": "projects/ml-tool-playground/logs/airflow-worker",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:21:50.488832+00:00",
+      "severity": "INFO",
+      "payload": "Job airflow_user_feature_store_ingestion_dag_7_calculate_distinct_events_2025_07_23T10_21_38_308427_00_00_1f4bada900bf84ba4be9f6e27ba5c9a1 is completed. Checking the job status",
+      "log_name": "projects/ml-tool-playground/logs/airflow-worker",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:21:50.613941+00:00",
+      "severity": "INFO",
+      "payload": "Marking task as SUCCESS. dag_id=user_feature_store_ingestion_dag_7, task_id=calculate_distinct_events, run_id=manual__2025-07-23T10:21:38.308427+00:00, execution_date=20250723T102138, start_date=20250723T102147, end_date=20250723T102150",
+      "log_name": "projects/ml-tool-playground/logs/airflow-worker",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:21:51.421148+00:00",
+      "severity": "INFO",
+      "payload": "\t<TaskInstance: user_feature_store_ingestion_dag_7.ingest_features_to_vertex manual__2025-07-23T10:21:38.308427+00:00 [scheduled]>",
+      "log_name": "projects/ml-tool-playground/logs/airflow-scheduler",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:21:51.422127+00:00",
+      "severity": "INFO",
+      "payload": "DAG user_feature_store_ingestion_dag_7 has 0/100 running and queued tasks",
+      "log_name": "projects/ml-tool-playground/logs/airflow-scheduler",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:21:51.423324+00:00",
+      "severity": "INFO",
+      "payload": "\t<TaskInstance: user_feature_store_ingestion_dag_7.ingest_features_to_vertex manual__2025-07-23T10:21:38.308427+00:00 [scheduled]>",
+      "log_name": "projects/ml-tool-playground/logs/airflow-scheduler",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:21:51.427868+00:00",
+      "severity": "INFO",
+      "payload": "Trying to enqueue tasks: [<TaskInstance: user_feature_store_ingestion_dag_7.ingest_features_to_vertex manual__2025-07-23T10:21:38.308427+00:00 [scheduled]>] for executor: CeleryKubernetesExecutor(parallelism=2000)",
+      "log_name": "projects/ml-tool-playground/logs/airflow-scheduler",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:21:51.428587+00:00",
+      "severity": "INFO",
+      "payload": "Sending TaskInstanceKey(dag_id='user_feature_store_ingestion_dag_7', task_id='ingest_features_to_vertex', run_id='manual__2025-07-23T10:21:38.308427+00:00', try_number=1, map_index=-1) to CeleryKubernetesExecutor with priority 1 and queue default",
+      "log_name": "projects/ml-tool-playground/logs/airflow-scheduler",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:21:51.429145+00:00",
+      "severity": "INFO",
+      "payload": "Adding to queue: ['airflow', 'tasks', 'run', 'user_feature_store_ingestion_dag_7', 'ingest_features_to_vertex', 'manual__2025-07-23T10:21:38.308427+00:00', '--local', '--subdir', 'DAGS_FOLDER/user_feature_store_ingestion_dag_7.py']",
+      "log_name": "projects/ml-tool-playground/logs/airflow-scheduler",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:21:51.437636+00:00",
+      "severity": "INFO",
+      "payload": "Received executor event with state queued for task instance TaskInstanceKey(dag_id='user_feature_store_ingestion_dag_7', task_id='ingest_features_to_vertex', run_id='manual__2025-07-23T10:21:38.308427+00:00', try_number=1, map_index=-1)",
+      "log_name": "projects/ml-tool-playground/logs/airflow-scheduler",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:21:51.438011+00:00",
+      "severity": "INFO",
+      "payload": "Received executor event with state success for task instance TaskInstanceKey(dag_id='user_feature_store_ingestion_dag_7', task_id='calculate_distinct_events', run_id='manual__2025-07-23T10:21:38.308427+00:00', try_number=1, map_index=-1)",
+      "log_name": "projects/ml-tool-playground/logs/airflow-scheduler",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:21:51.441312+00:00",
+      "severity": "INFO",
+      "payload": "[ad224ae4-1d57-40e5-9f6c-d9741913ce24] Executing command in Celery: ['airflow', 'tasks', 'run', 'user_feature_store_ingestion_dag_7', 'ingest_features_to_vertex', 'manual__2025-07-23T10:21:38.308427+00:00', '--local', '--subdir', 'DAGS_FOLDER/user_feature_store_ingestion_dag_7.py']",
+      "log_name": "projects/ml-tool-playground/logs/airflow-worker",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:21:51.447710+00:00",
+      "severity": "INFO",
+      "payload": "TaskInstance Finished: dag_id=user_feature_store_ingestion_dag_7, task_id=calculate_distinct_events, run_id=manual__2025-07-23T10:21:38.308427+00:00, map_index=-1, run_start_date=2025-07-23 10:21:47.356972+00:00, run_end_date=2025-07-23 10:21:50.612377+00:00, run_duration=3.255405, state=success, executor=CeleryKubernetesExecutor(parallelism=2000), executor_state=success, try_number=1, max_tries=1, job_id=684, pool=default_pool, queue=default, priority_weight=2, operator=BigQueryInsertJobOperator, queued_dttm=2025-07-23 10:21:39.224077+00:00, queued_by_job_id=674, pid=89406",
+      "log_name": "projects/ml-tool-playground/logs/airflow-scheduler",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:21:51.448796+00:00",
+      "severity": "INFO",
+      "payload": "Setting external_id for <TaskInstance: user_feature_store_ingestion_dag_7.ingest_features_to_vertex manual__2025-07-23T10:21:38.308427+00:00 [queued]> to ad224ae4-1d57-40e5-9f6c-d9741913ce24",
+      "log_name": "projects/ml-tool-playground/logs/airflow-scheduler",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:21:51.799035+00:00",
+      "severity": "INFO",
+      "payload": "Filling up the DagBag from /home/airflow/gcs/dags/user_feature_store_ingestion_dag_7.py",
+      "log_name": "projects/ml-tool-playground/logs/airflow-worker",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:22:02.181473+00:00",
+      "severity": "INFO",
+      "payload": "Running <TaskInstance: user_feature_store_ingestion_dag_7.ingest_features_to_vertex manual__2025-07-23T10:21:38.308427+00:00 [queued]> on host airflow-worker-bcjfh",
+      "log_name": "projects/ml-tool-playground/logs/airflow-worker",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:22:02.317027+00:00",
+      "severity": "INFO",
+      "payload": "Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: user_feature_store_ingestion_dag_7.ingest_features_to_vertex manual__2025-07-23T10:21:38.308427+00:00 [queued]>",
+      "log_name": "projects/ml-tool-playground/logs/airflow-worker",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:22:02.337556+00:00",
+      "severity": "INFO",
+      "payload": "Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: user_feature_store_ingestion_dag_7.ingest_features_to_vertex manual__2025-07-23T10:21:38.308427+00:00 [queued]>",
+      "log_name": "projects/ml-tool-playground/logs/airflow-worker",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:22:02.386776+00:00",
+      "severity": "INFO",
+      "payload": "Running: ['airflow', 'tasks', 'run', 'user_feature_store_ingestion_dag_7', 'ingest_features_to_vertex', 'manual__2025-07-23T10:21:38.308427+00:00', '--job-id', '685', '--raw', '--subdir', 'DAGS_FOLDER/user_feature_store_ingestion_dag_7.py', '--cfg-path', '/tmp/tmp11a5_4dz']",
+      "log_name": "projects/ml-tool-playground/logs/airflow-worker",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:22:02.487965+00:00",
+      "severity": "INFO",
+      "payload": "Running <TaskInstance: user_feature_store_ingestion_dag_7.ingest_features_to_vertex manual__2025-07-23T10:21:38.308427+00:00 [running]> on host airflow-worker-bcjfh",
+      "log_name": "projects/ml-tool-playground/logs/airflow-worker",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:22:02.719389+00:00",
+      "severity": "INFO",
+      "payload": "Exporting env vars: AIRFLOW_CTX_DAG_OWNER='SysAI Data Pipeline Agent' AIRFLOW_CTX_DAG_ID='user_feature_store_ingestion_dag_7' AIRFLOW_CTX_TASK_ID='ingest_features_to_vertex' AIRFLOW_CTX_EXECUTION_DATE='2025-07-23T10:21:38.308427+00:00' AIRFLOW_CTX_TRY_NUMBER='1' AIRFLOW_CTX_DAG_RUN_ID='manual__2025-07-23T10:21:38.308427+00:00'",
+      "log_name": "projects/ml-tool-playground/logs/airflow-worker",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    }
+  ]
+}

@@ -1,0 +1,562 @@
+{
+  "summary": {
+    "final_status": "dag_failed",
+    "task_states": {
+      "create_user_profile_features": "FAILED"
+    }
+  },
+  "logs": [
+    {
+      "timestamp": "2025-07-23T10:13:09.681640+00:00",
+      "severity": "INFO",
+      "payload": "\t<TaskInstance: user_profile_v1.create_user_profile_features manual__2025-07-23T10:13:09.014844+00:00 [scheduled]>",
+      "log_name": "projects/ml-tool-playground/logs/airflow-scheduler",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:13:09.681981+00:00",
+      "severity": "INFO",
+      "payload": "DAG user_profile_v1 has 0/100 running and queued tasks",
+      "log_name": "projects/ml-tool-playground/logs/airflow-scheduler",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:13:09.683610+00:00",
+      "severity": "INFO",
+      "payload": "\t<TaskInstance: user_profile_v1.create_user_profile_features manual__2025-07-23T10:13:09.014844+00:00 [scheduled]>",
+      "log_name": "projects/ml-tool-playground/logs/airflow-scheduler",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:13:09.688158+00:00",
+      "severity": "INFO",
+      "payload": "Trying to enqueue tasks: [<TaskInstance: user_profile_v1.create_user_profile_features manual__2025-07-23T10:13:09.014844+00:00 [scheduled]>] for executor: CeleryKubernetesExecutor(parallelism=2000)",
+      "log_name": "projects/ml-tool-playground/logs/airflow-scheduler",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:13:09.688510+00:00",
+      "severity": "INFO",
+      "payload": "Sending TaskInstanceKey(dag_id='user_profile_v1', task_id='create_user_profile_features', run_id='manual__2025-07-23T10:13:09.014844+00:00', try_number=1, map_index=-1) to CeleryKubernetesExecutor with priority 1 and queue default",
+      "log_name": "projects/ml-tool-playground/logs/airflow-scheduler",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:13:09.689054+00:00",
+      "severity": "INFO",
+      "payload": "Adding to queue: ['airflow', 'tasks', 'run', 'user_profile_v1', 'create_user_profile_features', 'manual__2025-07-23T10:13:09.014844+00:00', '--local', '--subdir', 'DAGS_FOLDER/user_profile_v1.py']",
+      "log_name": "projects/ml-tool-playground/logs/airflow-scheduler",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:13:09.701891+00:00",
+      "severity": "INFO",
+      "payload": "Received executor event with state queued for task instance TaskInstanceKey(dag_id='user_profile_v1', task_id='create_user_profile_features', run_id='manual__2025-07-23T10:13:09.014844+00:00', try_number=1, map_index=-1)",
+      "log_name": "projects/ml-tool-playground/logs/airflow-scheduler",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:13:09.706925+00:00",
+      "severity": "INFO",
+      "payload": "[24444a8b-041f-4f33-81ba-255e11f99241] Executing command in Celery: ['airflow', 'tasks', 'run', 'user_profile_v1', 'create_user_profile_features', 'manual__2025-07-23T10:13:09.014844+00:00', '--local', '--subdir', 'DAGS_FOLDER/user_profile_v1.py']",
+      "log_name": "projects/ml-tool-playground/logs/airflow-worker",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:13:09.711428+00:00",
+      "severity": "INFO",
+      "payload": "Setting external_id for <TaskInstance: user_profile_v1.create_user_profile_features manual__2025-07-23T10:13:09.014844+00:00 [queued]> to 24444a8b-041f-4f33-81ba-255e11f99241",
+      "log_name": "projects/ml-tool-playground/logs/airflow-scheduler",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:13:09.958022+00:00",
+      "severity": "INFO",
+      "payload": "Filling up the DagBag from /home/airflow/gcs/dags/user_profile_v1.py",
+      "log_name": "projects/ml-tool-playground/logs/airflow-worker",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:13:17.113058+00:00",
+      "severity": "INFO",
+      "payload": "Running <TaskInstance: user_profile_v1.create_user_profile_features manual__2025-07-23T10:13:09.014844+00:00 [queued]> on host airflow-worker-bcjfh",
+      "log_name": "projects/ml-tool-playground/logs/airflow-worker",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:13:17.237473+00:00",
+      "severity": "INFO",
+      "payload": "Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: user_profile_v1.create_user_profile_features manual__2025-07-23T10:13:09.014844+00:00 [queued]>",
+      "log_name": "projects/ml-tool-playground/logs/airflow-worker",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:13:17.256094+00:00",
+      "severity": "INFO",
+      "payload": "Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: user_profile_v1.create_user_profile_features manual__2025-07-23T10:13:09.014844+00:00 [queued]>",
+      "log_name": "projects/ml-tool-playground/logs/airflow-worker",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:13:17.325215+00:00",
+      "severity": "INFO",
+      "payload": "Running: ['airflow', 'tasks', 'run', 'user_profile_v1', 'create_user_profile_features', 'manual__2025-07-23T10:13:09.014844+00:00', '--job-id', '681', '--raw', '--subdir', 'DAGS_FOLDER/user_profile_v1.py', '--cfg-path', '/tmp/tmpxe6a9i75']",
+      "log_name": "projects/ml-tool-playground/logs/airflow-worker",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:13:17.514729+00:00",
+      "severity": "INFO",
+      "payload": "Running <TaskInstance: user_profile_v1.create_user_profile_features manual__2025-07-23T10:13:09.014844+00:00 [running]> on host airflow-worker-bcjfh",
+      "log_name": "projects/ml-tool-playground/logs/airflow-worker",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:13:17.774666+00:00",
+      "severity": "INFO",
+      "payload": "Exporting env vars: AIRFLOW_CTX_DAG_OWNER='Pavo' AIRFLOW_CTX_DAG_ID='user_profile_v1' AIRFLOW_CTX_TASK_ID='create_user_profile_features' AIRFLOW_CTX_EXECUTION_DATE='2025-07-23T10:13:09.014844+00:00' AIRFLOW_CTX_TRY_NUMBER='1' AIRFLOW_CTX_DAG_RUN_ID='manual__2025-07-23T10:13:09.014844+00:00'",
+      "log_name": "projects/ml-tool-playground/logs/airflow-worker",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:13:18.096325+00:00",
+      "severity": "INFO",
+      "payload": "Inserting job airflow_user_profile_v1_create_user_profile_features_2025_07_23T10_13_09_014844_00_00_23e6d818ab1e3474165054d0727714f4",
+      "log_name": "projects/ml-tool-playground/logs/airflow-worker",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:13:19.203840+00:00",
+      "severity": "ERROR",
+      "payload": "Task failed with exception\nTraceback (most recent call last):\n  File \"/opt/python3.11/lib/python3.11/site-packages/airflow/models/taskinstance.py\", line 769, in _execute_task\n    result = _execute_callable(context=context, **execute_callable_kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/python3.11/lib/python3.11/site-packages/airflow/models/taskinstance.py\", line 735, in _execute_callable\n    return ExecutionCallableRunner(\n           ^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/python3.11/lib/python3.11/site-packages/airflow/utils/operator_helpers.py\", line 252, in run\n    return self.func(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/python3.11/lib/python3.11/site-packages/airflow/models/baseoperator.py\", line 424, in wrapper\n    return func(self, *args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/python3.11/lib/python3.11/site-packages/airflow/providers/google/cloud/operators/bigquery.py\", line 3034, in execute\n    job.result(timeout=self.result_timeout, retry=self.result_retry)\n  File \"/opt/python3.11/lib/python3.11/site-packages/google/cloud/bigquery/job/query.py\", line 1696, in result\n    while not is_job_done():\n              ^^^^^^^^^^^^^\n  File \"/opt/python3.11/lib/python3.11/site-packages/google/cloud/bigquery/job/query.py\", line 1645, in is_job_done\n    raise job_failed_exception\ngoogle.api_core.exceptions.BadRequest: 400 Name total_sessions not found inside t1 at [1:23]; reason: invalidQuery, location: query, message: Name total_sessions not found inside t1 at [1:23]\n\nLocation: us-central1\nJob ID: airflow_user_profile_v1_create_user_profile_features_2025_07_23T10_13_09_014844_00_00_23e6d818ab1e3474165054d0727714f4\n",
+      "log_name": "projects/ml-tool-playground/logs/airflow-worker",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:13:19.254120+00:00",
+      "severity": "INFO",
+      "payload": "Marking task as UP_FOR_RETRY. dag_id=user_profile_v1, task_id=create_user_profile_features, run_id=manual__2025-07-23T10:13:09.014844+00:00, execution_date=20250723T101309, start_date=20250723T101317, end_date=20250723T101319",
+      "log_name": "projects/ml-tool-playground/logs/airflow-worker",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:13:19.473510+00:00",
+      "severity": "ERROR",
+      "payload": "Failed to execute job 681 for task create_user_profile_features (400 Name total_sessions not found inside t1 at [1:23]; reason: invalidQuery, location: query, message: Name total_sessions not found inside t1 at [1:23]\n\nLocation: us-central1\nJob ID: airflow_user_profile_v1_create_user_profile_features_2025_07_23T10_13_09_014844_00_00_23e6d818ab1e3474165054d0727714f4\n; 89259)\nTraceback (most recent call last):\n  File \"/opt/python3.11/lib/python3.11/site-packages/airflow/task/task_runner/standard_task_runner.py\", line 117, in _start_by_fork\n    ret = args.func(args, dag=self.dag)\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/python3.11/lib/python3.11/site-packages/airflow/cli/cli_config.py\", line 49, in command\n    return func(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/python3.11/lib/python3.11/site-packages/airflow/utils/cli.py\", line 116, in wrapper\n    return f(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^\n  File \"/opt/python3.11/lib/python3.11/site-packages/airflow/cli/commands/task_command.py\", line 489, in task_run\n    task_return_code = _run_task_by_selected_method(args, _dag, ti)\n                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/python3.11/lib/python3.11/site-packages/airflow/cli/commands/task_command.py\", line 256, in _run_task_by_selected_method\n    return _run_raw_task(args, ti)\n           ^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/python3.11/lib/python3.11/site-packages/airflow/cli/commands/task_command.py\", line 341, in _run_raw_task\n    return ti._run_raw_task(\n           ^^^^^^^^^^^^^^^^^\n  File \"/opt/python3.11/lib/python3.11/site-packages/airflow/utils/session.py\", line 97, in wrapper\n    return func(*args, session=session, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/python3.11/lib/python3.11/site-packages/airflow/models/taskinstance.py\", line 3008, in _run_raw_task\n    return _run_raw_task(\n           ^^^^^^^^^^^^^^\n  File \"/opt/python3.11/lib/python3.11/site-packages/airflow/models/taskinstance.py\", line 274, in _run_raw_task\n    TaskInstance._execute_task_with_callbacks(\n  File \"/opt/python3.11/lib/python3.11/site-packages/airflow/models/taskinstance.py\", line 3163, in _execute_task_with_callbacks\n    result = self._execute_task(context, task_orig)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/python3.11/lib/python3.11/site-packages/airflow/models/taskinstance.py\", line 3187, in _execute_task\n    return _execute_task(self, context, task_orig)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/python3.11/lib/python3.11/site-packages/airflow/models/taskinstance.py\", line 769, in _execute_task\n    result = _execute_callable(context=context, **execute_callable_kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/python3.11/lib/python3.11/site-packages/airflow/models/taskinstance.py\", line 735, in _execute_callable\n    return ExecutionCallableRunner(\n           ^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/python3.11/lib/python3.11/site-packages/airflow/utils/operator_helpers.py\", line 252, in run\n    return self.func(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/python3.11/lib/python3.11/site-packages/airflow/models/baseoperator.py\", line 424, in wrapper\n    return func(self, *args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/python3.11/lib/python3.11/site-packages/airflow/providers/google/cloud/operators/bigquery.py\", line 3034, in execute\n    job.result(timeout=self.result_timeout, retry=self.result_retry)\n  File \"/opt/python3.11/lib/python3.11/site-packages/google/cloud/bigquery/job/query.py\", line 1696, in result\n    while not is_job_done():\n              ^^^^^^^^^^^^^\n  File \"/opt/python3.11/lib/python3.11/site-packages/google/cloud/bigquery/job/query.py\", line 1645, in is_job_done\n    raise job_failed_exception\ngoogle.api_core.exceptions.BadRequest: 400 Name total_sessions not found inside t1 at [1:23]; reason: invalidQuery, location: query, message: Name total_sessions not found inside t1 at [1:23]\n\nLocation: us-central1\nJob ID: airflow_user_profile_v1_create_user_profile_features_2025_07_23T10_13_09_014844_00_00_23e6d818ab1e3474165054d0727714f4\n",
+      "log_name": "projects/ml-tool-playground/logs/airflow-worker",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:13:20.593209+00:00",
+      "severity": "INFO",
+      "payload": "Received executor event with state success for task instance TaskInstanceKey(dag_id='user_profile_v1', task_id='create_user_profile_features', run_id='manual__2025-07-23T10:13:09.014844+00:00', try_number=1, map_index=-1)",
+      "log_name": "projects/ml-tool-playground/logs/airflow-scheduler",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:13:20.602150+00:00",
+      "severity": "INFO",
+      "payload": "TaskInstance Finished: dag_id=user_profile_v1, task_id=create_user_profile_features, run_id=manual__2025-07-23T10:13:09.014844+00:00, map_index=-1, run_start_date=2025-07-23 10:13:17.237276+00:00, run_end_date=2025-07-23 10:13:19.252615+00:00, run_duration=2.015339, state=up_for_retry, executor=CeleryKubernetesExecutor(parallelism=2000), executor_state=success, try_number=1, max_tries=1, job_id=681, pool=default_pool, queue=default, priority_weight=1, operator=BigQueryInsertJobOperator, queued_dttm=2025-07-23 10:13:09.684121+00:00, queued_by_job_id=674, pid=89259",
+      "log_name": "projects/ml-tool-playground/logs/airflow-scheduler",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:18:20.117680+00:00",
+      "severity": "INFO",
+      "payload": "\t<TaskInstance: user_profile_v1.create_user_profile_features manual__2025-07-23T10:13:09.014844+00:00 [scheduled]>",
+      "log_name": "projects/ml-tool-playground/logs/airflow-scheduler",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:18:20.117884+00:00",
+      "severity": "INFO",
+      "payload": "DAG user_profile_v1 has 0/100 running and queued tasks",
+      "log_name": "projects/ml-tool-playground/logs/airflow-scheduler",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:18:20.119248+00:00",
+      "severity": "INFO",
+      "payload": "\t<TaskInstance: user_profile_v1.create_user_profile_features manual__2025-07-23T10:13:09.014844+00:00 [scheduled]>",
+      "log_name": "projects/ml-tool-playground/logs/airflow-scheduler",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:18:20.123222+00:00",
+      "severity": "INFO",
+      "payload": "Trying to enqueue tasks: [<TaskInstance: user_profile_v1.create_user_profile_features manual__2025-07-23T10:13:09.014844+00:00 [scheduled]>] for executor: CeleryKubernetesExecutor(parallelism=2000)",
+      "log_name": "projects/ml-tool-playground/logs/airflow-scheduler",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:18:20.123730+00:00",
+      "severity": "INFO",
+      "payload": "Sending TaskInstanceKey(dag_id='user_profile_v1', task_id='create_user_profile_features', run_id='manual__2025-07-23T10:13:09.014844+00:00', try_number=2, map_index=-1) to CeleryKubernetesExecutor with priority 1 and queue default",
+      "log_name": "projects/ml-tool-playground/logs/airflow-scheduler",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:18:20.124173+00:00",
+      "severity": "INFO",
+      "payload": "Adding to queue: ['airflow', 'tasks', 'run', 'user_profile_v1', 'create_user_profile_features', 'manual__2025-07-23T10:13:09.014844+00:00', '--local', '--subdir', 'DAGS_FOLDER/user_profile_v1.py']",
+      "log_name": "projects/ml-tool-playground/logs/airflow-scheduler",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:18:20.132739+00:00",
+      "severity": "INFO",
+      "payload": "Received executor event with state queued for task instance TaskInstanceKey(dag_id='user_profile_v1', task_id='create_user_profile_features', run_id='manual__2025-07-23T10:13:09.014844+00:00', try_number=2, map_index=-1)",
+      "log_name": "projects/ml-tool-playground/logs/airflow-scheduler",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:18:20.137948+00:00",
+      "severity": "INFO",
+      "payload": "[12686082-c6a4-43c8-8cde-2cdc64fff97d] Executing command in Celery: ['airflow', 'tasks', 'run', 'user_profile_v1', 'create_user_profile_features', 'manual__2025-07-23T10:13:09.014844+00:00', '--local', '--subdir', 'DAGS_FOLDER/user_profile_v1.py']",
+      "log_name": "projects/ml-tool-playground/logs/airflow-worker",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:18:20.140514+00:00",
+      "severity": "INFO",
+      "payload": "Setting external_id for <TaskInstance: user_profile_v1.create_user_profile_features manual__2025-07-23T10:13:09.014844+00:00 [queued]> to 12686082-c6a4-43c8-8cde-2cdc64fff97d",
+      "log_name": "projects/ml-tool-playground/logs/airflow-scheduler",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:18:20.398172+00:00",
+      "severity": "INFO",
+      "payload": "Filling up the DagBag from /home/airflow/gcs/dags/user_profile_v1.py",
+      "log_name": "projects/ml-tool-playground/logs/airflow-worker",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:18:23.546137+00:00",
+      "severity": "INFO",
+      "payload": "Running <TaskInstance: user_profile_v1.create_user_profile_features manual__2025-07-23T10:13:09.014844+00:00 [queued]> on host airflow-worker-bcjfh",
+      "log_name": "projects/ml-tool-playground/logs/airflow-worker",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:18:23.681183+00:00",
+      "severity": "INFO",
+      "payload": "Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: user_profile_v1.create_user_profile_features manual__2025-07-23T10:13:09.014844+00:00 [queued]>",
+      "log_name": "projects/ml-tool-playground/logs/airflow-worker",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:18:23.700122+00:00",
+      "severity": "INFO",
+      "payload": "Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: user_profile_v1.create_user_profile_features manual__2025-07-23T10:13:09.014844+00:00 [queued]>",
+      "log_name": "projects/ml-tool-playground/logs/airflow-worker",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:18:23.758518+00:00",
+      "severity": "INFO",
+      "payload": "Running: ['airflow', 'tasks', 'run', 'user_profile_v1', 'create_user_profile_features', 'manual__2025-07-23T10:13:09.014844+00:00', '--job-id', '682', '--raw', '--subdir', 'DAGS_FOLDER/user_profile_v1.py', '--cfg-path', '/tmp/tmps249deku']",
+      "log_name": "projects/ml-tool-playground/logs/airflow-worker",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:18:23.868575+00:00",
+      "severity": "INFO",
+      "payload": "Running <TaskInstance: user_profile_v1.create_user_profile_features manual__2025-07-23T10:13:09.014844+00:00 [running]> on host airflow-worker-bcjfh",
+      "log_name": "projects/ml-tool-playground/logs/airflow-worker",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:18:24.189502+00:00",
+      "severity": "INFO",
+      "payload": "Exporting env vars: AIRFLOW_CTX_DAG_OWNER='Pavo' AIRFLOW_CTX_DAG_ID='user_profile_v1' AIRFLOW_CTX_TASK_ID='create_user_profile_features' AIRFLOW_CTX_EXECUTION_DATE='2025-07-23T10:13:09.014844+00:00' AIRFLOW_CTX_TRY_NUMBER='2' AIRFLOW_CTX_DAG_RUN_ID='manual__2025-07-23T10:13:09.014844+00:00'",
+      "log_name": "projects/ml-tool-playground/logs/airflow-worker",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:18:24.380519+00:00",
+      "severity": "INFO",
+      "payload": "Inserting job airflow_user_profile_v1_create_user_profile_features_2025_07_23T10_13_09_014844_00_00_d7fd5847b5b78dc2a68c25e6dea5770d",
+      "log_name": "projects/ml-tool-playground/logs/airflow-worker",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:18:25.030567+00:00",
+      "severity": "ERROR",
+      "payload": "Task failed with exception\nTraceback (most recent call last):\n  File \"/opt/python3.11/lib/python3.11/site-packages/airflow/models/taskinstance.py\", line 769, in _execute_task\n    result = _execute_callable(context=context, **execute_callable_kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/python3.11/lib/python3.11/site-packages/airflow/models/taskinstance.py\", line 735, in _execute_callable\n    return ExecutionCallableRunner(\n           ^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/python3.11/lib/python3.11/site-packages/airflow/utils/operator_helpers.py\", line 252, in run\n    return self.func(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/python3.11/lib/python3.11/site-packages/airflow/models/baseoperator.py\", line 424, in wrapper\n    return func(self, *args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/python3.11/lib/python3.11/site-packages/airflow/providers/google/cloud/operators/bigquery.py\", line 3034, in execute\n    job.result(timeout=self.result_timeout, retry=self.result_retry)\n  File \"/opt/python3.11/lib/python3.11/site-packages/google/cloud/bigquery/job/query.py\", line 1696, in result\n    while not is_job_done():\n              ^^^^^^^^^^^^^\n  File \"/opt/python3.11/lib/python3.11/site-packages/google/cloud/bigquery/job/query.py\", line 1645, in is_job_done\n    raise job_failed_exception\ngoogle.api_core.exceptions.BadRequest: 400 Name total_sessions not found inside t1 at [1:23]; reason: invalidQuery, location: query, message: Name total_sessions not found inside t1 at [1:23]\n\nLocation: us-central1\nJob ID: airflow_user_profile_v1_create_user_profile_features_2025_07_23T10_13_09_014844_00_00_d7fd5847b5b78dc2a68c25e6dea5770d\n",
+      "log_name": "projects/ml-tool-playground/logs/airflow-worker",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:18:25.066092+00:00",
+      "severity": "INFO",
+      "payload": "Marking task as FAILED. dag_id=user_profile_v1, task_id=create_user_profile_features, run_id=manual__2025-07-23T10:13:09.014844+00:00, execution_date=20250723T101309, start_date=20250723T101823, end_date=20250723T101825",
+      "log_name": "projects/ml-tool-playground/logs/airflow-worker",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:18:25.164607+00:00",
+      "severity": "ERROR",
+      "payload": "Failed to execute job 682 for task create_user_profile_features (400 Name total_sessions not found inside t1 at [1:23]; reason: invalidQuery, location: query, message: Name total_sessions not found inside t1 at [1:23]\n\nLocation: us-central1\nJob ID: airflow_user_profile_v1_create_user_profile_features_2025_07_23T10_13_09_014844_00_00_d7fd5847b5b78dc2a68c25e6dea5770d\n; 89339)\nTraceback (most recent call last):\n  File \"/opt/python3.11/lib/python3.11/site-packages/airflow/task/task_runner/standard_task_runner.py\", line 117, in _start_by_fork\n    ret = args.func(args, dag=self.dag)\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/python3.11/lib/python3.11/site-packages/airflow/cli/cli_config.py\", line 49, in command\n    return func(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/python3.11/lib/python3.11/site-packages/airflow/utils/cli.py\", line 116, in wrapper\n    return f(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^\n  File \"/opt/python3.11/lib/python3.11/site-packages/airflow/cli/commands/task_command.py\", line 489, in task_run\n    task_return_code = _run_task_by_selected_method(args, _dag, ti)\n                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/python3.11/lib/python3.11/site-packages/airflow/cli/commands/task_command.py\", line 256, in _run_task_by_selected_method\n    return _run_raw_task(args, ti)\n           ^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/python3.11/lib/python3.11/site-packages/airflow/cli/commands/task_command.py\", line 341, in _run_raw_task\n    return ti._run_raw_task(\n           ^^^^^^^^^^^^^^^^^\n  File \"/opt/python3.11/lib/python3.11/site-packages/airflow/utils/session.py\", line 97, in wrapper\n    return func(*args, session=session, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/python3.11/lib/python3.11/site-packages/airflow/models/taskinstance.py\", line 3008, in _run_raw_task\n    return _run_raw_task(\n           ^^^^^^^^^^^^^^\n  File \"/opt/python3.11/lib/python3.11/site-packages/airflow/models/taskinstance.py\", line 274, in _run_raw_task\n    TaskInstance._execute_task_with_callbacks(\n  File \"/opt/python3.11/lib/python3.11/site-packages/airflow/models/taskinstance.py\", line 3163, in _execute_task_with_callbacks\n    result = self._execute_task(context, task_orig)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/python3.11/lib/python3.11/site-packages/airflow/models/taskinstance.py\", line 3187, in _execute_task\n    return _execute_task(self, context, task_orig)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/python3.11/lib/python3.11/site-packages/airflow/models/taskinstance.py\", line 769, in _execute_task\n    result = _execute_callable(context=context, **execute_callable_kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/python3.11/lib/python3.11/site-packages/airflow/models/taskinstance.py\", line 735, in _execute_callable\n    return ExecutionCallableRunner(\n           ^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/python3.11/lib/python3.11/site-packages/airflow/utils/operator_helpers.py\", line 252, in run\n    return self.func(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/python3.11/lib/python3.11/site-packages/airflow/models/baseoperator.py\", line 424, in wrapper\n    return func(self, *args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/python3.11/lib/python3.11/site-packages/airflow/providers/google/cloud/operators/bigquery.py\", line 3034, in execute\n    job.result(timeout=self.result_timeout, retry=self.result_retry)\n  File \"/opt/python3.11/lib/python3.11/site-packages/google/cloud/bigquery/job/query.py\", line 1696, in result\n    while not is_job_done():\n              ^^^^^^^^^^^^^\n  File \"/opt/python3.11/lib/python3.11/site-packages/google/cloud/bigquery/job/query.py\", line 1645, in is_job_done\n    raise job_failed_exception\ngoogle.api_core.exceptions.BadRequest: 400 Name total_sessions not found inside t1 at [1:23]; reason: invalidQuery, location: query, message: Name total_sessions not found inside t1 at [1:23]\n\nLocation: us-central1\nJob ID: airflow_user_profile_v1_create_user_profile_features_2025_07_23T10_13_09_014844_00_00_d7fd5847b5b78dc2a68c25e6dea5770d\n",
+      "log_name": "projects/ml-tool-playground/logs/airflow-worker",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:18:25.264186+00:00",
+      "severity": "ERROR",
+      "payload": "Marking run <DagRun user_profile_v1 @ 2025-07-23 10:13:09.014844+00:00: manual__2025-07-23T10:13:09.014844+00:00, state:running, queued_at: None. externally triggered: True> failed",
+      "log_name": "projects/ml-tool-playground/logs/airflow-scheduler",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:18:25.265621+00:00",
+      "severity": "INFO",
+      "payload": "DagRun Finished: dag_id=user_profile_v1, execution_date=2025-07-23 10:13:09.014844+00:00, run_id=manual__2025-07-23T10:13:09.014844+00:00, run_start_date=2025-07-23 10:13:09.617237+00:00, run_end_date=2025-07-23 10:18:25.264062+00:00, run_duration=315.646825, state=failed, external_trigger=True, run_type=manual, data_interval_start=2025-07-22 00:00:00+00:00, data_interval_end=2025-07-23 00:00:00+00:00, dag_hash=0cf2767529521736d1cb3b34fa1c2576",
+      "log_name": "projects/ml-tool-playground/logs/airflow-scheduler",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:18:25.988484+00:00",
+      "severity": "INFO",
+      "payload": "Received executor event with state success for task instance TaskInstanceKey(dag_id='user_profile_v1', task_id='create_user_profile_features', run_id='manual__2025-07-23T10:13:09.014844+00:00', try_number=2, map_index=-1)",
+      "log_name": "projects/ml-tool-playground/logs/airflow-scheduler",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    },
+    {
+      "timestamp": "2025-07-23T10:18:25.997457+00:00",
+      "severity": "INFO",
+      "payload": "TaskInstance Finished: dag_id=user_profile_v1, task_id=create_user_profile_features, run_id=manual__2025-07-23T10:13:09.014844+00:00, map_index=-1, run_start_date=2025-07-23 10:18:23.681143+00:00, run_end_date=2025-07-23 10:18:25.064532+00:00, run_duration=1.383389, state=failed, executor=CeleryKubernetesExecutor(parallelism=2000), executor_state=success, try_number=2, max_tries=1, job_id=682, pool=default_pool, queue=default, priority_weight=1, operator=BigQueryInsertJobOperator, queued_dttm=2025-07-23 10:18:20.119646+00:00, queued_by_job_id=674, pid=89339",
+      "log_name": "projects/ml-tool-playground/logs/airflow-scheduler",
+      "resource_type": "cloud_composer_environment",
+      "resource_labels": {
+        "environment_name": "tool-testing",
+        "location": "us-central1",
+        "project_id": "ml-tool-playground"
+      }
+    }
+  ]
+}
