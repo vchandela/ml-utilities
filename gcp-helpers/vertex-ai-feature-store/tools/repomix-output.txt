@@ -1,0 +1,970 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+feature_group_operations.py
+feature_operations.py
+feature_view_operations.py
+fetch_operations.py
+online_store_operations.py
+requirements.txt
+shared_utils.py
+sync_operations.py
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="feature_group_operations.py">
+"""
+Feature Group Operations for Vertex AI Feature Store.
+
+This module provides functions for creating, retrieving, and listing feature groups
+in Vertex AI Feature Store using the modern vertexai.resources.preview.feature_store SDK.
+"""
+
+import logging
+from typing import Dict, List, Any, Optional
+
+from shared_utils import init_aiplatform
+from vertexai.resources.preview import feature_store
+from google.api_core import exceptions as google_exceptions
+
+logger = logging.getLogger(__name__)
+
+def create_feature_group(
+    project_id: str,
+    location: str,
+    feature_group_id: str,
+    bq_table_uri: str,
+    entity_id_columns: List[str],
+    description: Optional[str] = None,
+    labels: Optional[Dict[str, str]] = None
+) -> feature_store.FeatureGroup:
+    """
+    Creates a new feature group in Vertex AI Feature Store with BigQuery source.
+
+    Args:
+        project_id: Your GCP project ID.
+        location: Region where the feature group will be created.
+        feature_group_id: The name of the new feature group.
+        bq_table_uri: The BigQuery source table URI (e.g., "bq://project.dataset.table").
+        entity_id_columns: Column(s) in the BigQuery table that contain the entity ID.
+        description: A description for the feature group.
+        labels: Optional key-value pairs for labeling the feature group.
+
+    Returns:
+        A dictionary with the status and details of the created feature group.
+
+    Raises:
+        RuntimeError: If initialization or API call fails.
+        ValueError: If required parameters are missing or invalid.
+    """
+    if not project_id:
+        raise ValueError("project_id is required for creating a feature group.")
+    if not feature_group_id:
+        raise ValueError("feature_group_id is required for creating a feature group.")
+    if not bq_table_uri:
+        raise ValueError("bq_table_uri is required for creating a feature group.")
+    if not entity_id_columns:
+        raise ValueError("entity_id_columns must be provided.")
+
+    try:
+        # Initialize AI Platform
+        init_aiplatform(project_id, location)
+        
+        logger.info(f"Creating FeatureGroup '{feature_group_id}' with BigQuery source '{bq_table_uri}'...")
+        
+        # Create feature group with BigQuery source
+        fg = feature_store.FeatureGroup.create(
+            name=feature_group_id,
+            source=feature_store.utils.FeatureGroupBigQuerySource(
+                uri=bq_table_uri, 
+                entity_id_columns=entity_id_columns
+            ),
+            description=description,
+            labels=labels or {}
+        )
+        
+        logger.info(f"FeatureGroup created: {fg.resource_name}")
+        
+        return fg
+    except Exception as e:
+        logger.error(f"An unexpected error occurred creating FeatureGroup '{feature_group_id}': {repr(e)}")
+        raise RuntimeError(f"An unexpected error occurred creating FeatureGroup '{feature_group_id}': {repr(e)}") from e
+
+def get_feature_group(project_id: str, location: str, feature_group_id: str) -> Dict[str, Any]:
+    """
+    Retrieves details of a specific feature group.
+
+    Args:
+        project_id: Your GCP project ID.
+        location: Region of the feature group.
+        feature_group_id: The name of the feature group.
+
+    Returns:
+        A dictionary containing feature group details on success,
+        or raises an exception on failure.
+    """
+    if not project_id:
+        raise ValueError("project_id is required.")
+    if not feature_group_id:
+        raise ValueError("feature_group_id is required.")
+
+    try:
+        # Initialize AI Platform
+        init_aiplatform(project_id, location)
+        
+        logger.info(f"Getting FeatureGroup '{feature_group_id}'...")
+        
+        # Get the feature group
+        fg = feature_store.FeatureGroup(feature_group_id)
+        
+        return {
+            "status": "success",
+            "message": f"Successfully retrieved FeatureGroup '{feature_group_id}'.",
+            "feature_group_details": {
+                "name": fg.resource_name,
+                "display_name": getattr(fg, 'display_name', feature_group_id),
+                "description": getattr(fg, 'description', None),
+                "create_time": getattr(fg, 'create_time', None),
+                "update_time": getattr(fg, 'update_time', None),
+                "labels": getattr(fg, 'labels', {})
+            }
+        }
+    except google_exceptions.NotFound:
+        return {"status": "not_found", "message": f"FeatureGroup '{feature_group_id}' not found."}
+    except google_exceptions.GoogleAPIError as e:
+        error_message = f"Google API error getting FeatureGroup '{feature_group_id}': {e}"
+        logger.error(error_message)
+        raise RuntimeError(error_message) from e
+    except Exception as e:
+        error_message = f"An unexpected error occurred getting FeatureGroup '{feature_group_id}': {repr(e)}"
+        logger.error(error_message)
+        raise RuntimeError(error_message) from e
+
+def list_feature_groups(project_id: str, location: str) -> List[Dict[str, Any]]:
+    """
+    Lists all feature groups in a given project and location.
+
+    Args:
+        project_id: Your GCP project ID.
+        location: The GCP region where the feature groups are located.
+
+    Returns:
+        A list of dictionaries, where each dictionary represents a feature group.
+
+    Raises:
+        RuntimeError: If initialization or API call fails.
+        ValueError: If required parameters are missing.
+    """
+    if not project_id:
+        raise ValueError("project_id is required for listing feature groups.")
+    
+    try:
+        # Initialize AI Platform
+        init_aiplatform(project_id, location)
+        
+        logger.info(f"Listing FeatureGroups in project '{project_id}' location '{location}'...")
+        
+        # List all feature groups
+        feature_groups = feature_store.FeatureGroup.list()
+        
+        feature_groups_list = []
+        for fg in feature_groups:
+            feature_groups_list.append({
+                "name": fg.resource_name,
+                "display_name": getattr(fg, 'display_name', 'N/A'),
+                "description": getattr(fg, 'description', None),
+                "create_time": getattr(fg, 'create_time', None),
+                "update_time": getattr(fg, 'update_time', None), 
+                "labels": getattr(fg, 'labels', {})
+            })
+        
+        return feature_groups_list
+
+    except google_exceptions.GoogleAPIError as e:
+        error_message = f"Google API error listing FeatureGroups in {project_id}:{location}: {e}"
+        logger.error(error_message)
+        raise RuntimeError(error_message) from e
+    except Exception as e:
+        error_message = f"An unexpected error occurred listing FeatureGroups: {repr(e)}"
+        logger.error(error_message)
+        raise RuntimeError(error_message) from e
+</file>
+
+<file path="feature_operations.py">
+"""
+Feature Operations for Vertex AI Feature Store.
+
+This module provides functions for creating and listing features within feature groups
+in Vertex AI Feature Store using the modern vertexai.resources.preview.feature_store SDK.
+"""
+
+import logging
+from typing import Dict, List, Any, Optional
+
+from shared_utils import init_aiplatform
+from vertexai.resources.preview import feature_store
+from google.api_core import exceptions as google_exceptions
+
+logger = logging.getLogger(__name__)
+
+def create_feature(
+    project_id: str,
+    location: str,
+    feature_group_id: str,
+    feature_id: str,
+    version_column_name: str,
+    description: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Creates a feature within an existing feature group.
+
+    Args:
+        project_id: Your GCP project ID.
+        location: Region of the feature group.
+        feature_group_id: The ID of the parent feature group.
+        feature_id: The name of the new feature.
+        version_column_name: The column from the BigQuery table or view that you want to associate with the feature.
+        description: An optional description for the feature.
+
+    Returns:
+        A dictionary with the status and details of the created feature.
+
+    Raises:
+        RuntimeError: If initialization or API call fails.
+        ValueError: If required parameters are missing or invalid.
+    """
+    if not project_id:
+        raise ValueError("project_id is required.")
+    if not feature_group_id:
+        raise ValueError("feature_group_id is required.")
+    if not feature_id:
+        raise ValueError("feature_id is required.")
+    if not version_column_name:
+        raise ValueError("version_column_name is required.")
+
+    try:
+        # Initialize AI Platform
+        init_aiplatform(project_id, location)
+        
+        logger.info(f"Creating Feature '{feature_id}' in FeatureGroup '{feature_group_id}'...")
+        
+        # Get the existing feature group
+        feature_group = feature_store.FeatureGroup(feature_group_id)
+        
+        # Create feature on the feature group
+        feature = feature_group.create_feature(
+            name=feature_id,
+            version_column_name=version_column_name
+        )
+        
+        logger.info(f"Feature created: {feature.resource_name}")
+        
+        return {
+            "status": "success",
+            "message": f"Feature '{feature_id}' created successfully in FeatureGroup '{feature_group_id}'.",
+            "feature_name": feature.resource_name,
+            "feature_id": feature_id,
+            "feature_group_id": feature_group_id,
+            "version_column_name": version_column_name
+        }
+
+    except google_exceptions.AlreadyExists:
+        return {"status": "already_exists", "message": f"Feature '{feature_id}' already exists."}
+    except google_exceptions.GoogleAPIError as e:
+        error_message = f"Google API error creating Feature '{feature_id}': {e}"
+        logger.error(error_message)
+        raise RuntimeError(error_message) from e
+    except Exception as e:
+        error_message = f"An unexpected error occurred creating Feature '{feature_id}': {repr(e)}"
+        logger.error(error_message)
+        raise RuntimeError(error_message) from e
+
+def list_features(project_id: str, location: str, feature_group_id: str) -> List[Dict[str, Any]]:
+    """
+    Lists all features within a specific feature group.
+
+    Args:
+        project_id: Your GCP project ID.
+        location: The GCP region of the feature group.
+        feature_group_id: The ID of the parent feature group.
+
+    Returns:
+        A list of dictionaries, where each dictionary represents a feature.
+
+    Raises:
+        RuntimeError: If initialization or API call fails.
+        ValueError: If required parameters are missing.
+    """
+    if not project_id:
+        raise ValueError("project_id is required.")
+    if not feature_group_id:
+        raise ValueError("feature_group_id is required.")
+
+    try:
+        # Initialize AI Platform
+        init_aiplatform(project_id, location)
+        
+        logger.info(f"Listing features for FeatureGroup '{feature_group_id}'...")
+        
+        # Get the feature group
+        feature_group = feature_store.FeatureGroup(feature_group_id)
+        
+        # List features in the feature group
+        features = feature_group.list_features()
+        
+        features_list = []
+        for feature in features:
+            features_list.append({
+                "name": feature.resource_name,
+                "display_name": getattr(feature, 'display_name', 'N/A'),
+                "description": getattr(feature, 'description', None),
+                "create_time": getattr(feature, 'create_time', None),
+                "update_time": getattr(feature, 'update_time', None),
+                "labels": getattr(feature, 'labels', {})
+            })
+        
+        return features_list
+
+    except google_exceptions.NotFound:
+        error_message = f"FeatureGroup '{feature_group_id}' not found."
+        logger.error(error_message)
+        raise RuntimeError(error_message)
+    except google_exceptions.GoogleAPIError as e:
+        error_message = f"Google API error listing Features for '{feature_group_id}': {e}"
+        logger.error(error_message)
+        raise RuntimeError(error_message) from e
+    except Exception as e:
+        error_message = f"An unexpected error occurred listing Features for '{feature_group_id}': {repr(e)}"
+        logger.error(error_message)
+        raise RuntimeError(error_message) from e
+</file>
+
+<file path="feature_view_operations.py">
+"""
+Feature View Operations for Vertex AI Feature Store.
+
+This module provides functions for creating and listing feature views
+in Vertex AI Feature Store using the modern vertexai SDK.
+"""
+
+import logging
+import requests
+import json
+import subprocess
+from typing import Dict, List, Any, Optional
+
+from shared_utils import init_aiplatform
+from google.api_core import exceptions as google_exceptions
+
+logger = logging.getLogger(__name__)
+
+def create_feature_view(
+    project_id: str,
+    location: str,
+    online_store_name: str,
+    feature_view_name: str,
+    feature_registry_source: Dict[str, Any],
+    sync_config: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
+    """
+    Creates a feature view, linking feature groups and an online store.
+
+    Args:
+        project_id: Your GCP project ID.
+        location: Region of the feature view.
+        online_store_name: The name of the online store to associate with.
+        feature_view_name: The name for the new feature view.
+        feature_registry_source: Dictionary containing feature_registry_source with feature_groups.
+                                Example: {"feature_groups": [{"feature_group_id": "fg_1", "feature_ids": ["feat_a", "feat_b"]}]}
+        sync_config: Optional configuration for data synchronization.
+                    Example: {"cron": "0 0 * * *"}
+
+    Returns:
+        A dictionary with the status and details of the created feature view.
+    """
+    if not project_id or not online_store_name or not feature_view_name or not feature_registry_source:
+        raise ValueError("All required parameters must be provided.")
+
+    try:
+        init_aiplatform(project_id, location)
+        
+        logger.info(f"Creating FeatureView '{feature_view_name}' for OnlineStore '{online_store_name}'...")
+        
+        # Get access token using gcloud
+        try:
+            access_token = subprocess.check_output(
+                ["gcloud", "auth", "print-access-token"], 
+                text=True, 
+                stderr=subprocess.PIPE
+            ).strip()
+        except subprocess.CalledProcessError as e:
+            error_message = f"Failed to get access token: {e.stderr}"
+            logger.error(error_message)
+            raise RuntimeError(error_message)
+        
+        # Construct the API URL
+        api_url = f"https://{location}-aiplatform.googleapis.com/v1/projects/{project_id}/locations/{location}/featureOnlineStores/{online_store_name}/featureViews?feature_view_id={feature_view_name}"
+        
+        # Prepare the request body
+        request_body = {
+            "feature_registry_source": feature_registry_source
+        }
+        
+        # Add sync config if provided
+        if sync_config:
+            request_body["sync_config"] = sync_config
+        
+        logger.info(f"API URL: {api_url}")
+        logger.info(f"Request body: {json.dumps(request_body, indent=2)}")
+        
+        # Make the POST request
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json; charset=utf-8"
+        }
+        
+        response = requests.post(api_url, headers=headers, json=request_body)
+        
+        if response.status_code == 200:
+            response_data = response.json()
+            logger.info(f"FeatureView created successfully: {response_data.get('name', 'N/A')}")
+        else:
+            error_message = f"API request failed with status {response.status_code}: {response.text}"
+            logger.error(error_message)
+            raise RuntimeError(error_message)
+        
+        return {
+            "status": "success",
+            "message": f"FeatureView '{feature_view_name}' created successfully.",
+            "feature_view_name": response_data.get('name', f"{online_store_name}/featureViews/{feature_view_name}"),
+            "online_store_name": online_store_name,
+            "feature_registry_source": feature_registry_source,
+            "sync_config": sync_config,
+            "response_data": response_data
+        }
+        
+    except google_exceptions.AlreadyExists:
+        return {"status": "already_exists", "message": f"FeatureView '{feature_view_name}' already exists."}
+    except Exception as e:
+        error_message = f"An unexpected error occurred creating FeatureView '{feature_view_name}': {repr(e)}"
+        logger.error(error_message)
+        raise RuntimeError(error_message) from e
+
+def list_feature_views(project_id: str, location: str, online_store_name: str) -> List[Dict[str, Any]]:
+    """
+    Lists all feature views for a given online store.
+
+    Args:
+        project_id: Your GCP project ID.
+        location: The GCP region of the online store.
+        online_store_name: The name of the online store.
+
+    Returns:
+        A list of dictionaries, where each dictionary represents a feature view.
+    """
+    if not project_id or not online_store_name:
+        raise ValueError("project_id and online_store_name are required.")
+
+    try:
+        init_aiplatform(project_id, location)
+        
+        logger.info(f"Listing FeatureViews for OnlineStore '{online_store_name}'...")
+        
+        # Get access token using gcloud
+        try:
+            access_token = subprocess.check_output(
+                ["gcloud", "auth", "print-access-token"], 
+                text=True, 
+                stderr=subprocess.PIPE
+            ).strip()
+        except subprocess.CalledProcessError as e:
+            error_message = f"Failed to get access token: {e.stderr}"
+            logger.error(error_message)
+            raise RuntimeError(error_message)
+        
+        # Construct the API URL
+        api_url = f"https://{location}-aiplatform.googleapis.com/v1/projects/{project_id}/locations/{location}/featureOnlineStores/{online_store_name}/featureViews"
+        
+        # Make the GET request
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json; charset=utf-8"
+        }
+        
+        response = requests.get(api_url, headers=headers)
+        
+        if response.status_code == 200:
+            response_data = response.json()
+            feature_views_list = []
+            
+            for fv in response_data.get('featureViews', []):
+                feature_views_list.append({
+                    "name": fv.get('name', 'N/A'),
+                    "display_name": fv.get('displayName', 'N/A'),
+                    "create_time": fv.get('createTime', None),
+                    "update_time": fv.get('updateTime', None),
+                    "labels": fv.get('labels', {}),
+                    "sync_config": fv.get('syncConfig', None),
+                    "feature_registry_source": fv.get('featureRegistrySource', {})
+                })
+            
+            return feature_views_list
+        else:
+            error_message = f"API request failed with status {response.status_code}: {response.text}"
+            logger.error(error_message)
+            raise RuntimeError(error_message)
+
+    except Exception as e:
+        error_message = f"An unexpected error occurred listing FeatureViews for '{online_store_name}': {repr(e)}"
+        logger.error(error_message)
+        raise RuntimeError(error_message) from e
+</file>
+
+<file path="fetch_operations.py">
+"""
+Fetch Operations for Vertex AI Feature Store.
+
+This module provides functions for fetching feature values from online stores
+in Vertex AI Feature Store using the modern vertexai SDK.
+"""
+
+import logging
+from typing import Dict, Any, Optional
+
+from shared_utils import init_aiplatform
+from vertexai.resources.preview.feature_store import FeatureOnlineStore, FeatureView
+from google.api_core import exceptions as google_exceptions
+
+logger = logging.getLogger(__name__)
+
+def fetch_feature_values(
+    project_id: str,
+    location: str,
+    online_store_name: str,
+    feature_view_name: str,
+    target_entity_id: str,
+    format: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Fetches feature values for a specific entity ID from an online store.
+
+    Args:
+        project_id: Your GCP project ID.
+        location: Region where the online store is located.
+        online_store_name: The name of the online store.
+        feature_view_name: The name of the feature view.
+        entity_id: The value of the ID column for the feature record.
+        format: Optional format for fetching values (not used in modern SDK).
+
+    Returns:
+        A dictionary containing the fetched feature values.
+
+    Raises:
+        RuntimeError: If initialization or API call fails.
+        ValueError: If required parameters are missing.
+    """
+    if not project_id:
+        raise ValueError("project_id is required.")
+    if not online_store_name:
+        raise ValueError("online_store_name is required.")
+    if not feature_view_name:
+        raise ValueError("feature_view_name is required.")
+    if not target_entity_id:
+        raise ValueError("target_entity_id is required.")
+
+    try:
+        # Initialize AI Platform
+        init_aiplatform(project_id, location)
+        
+        logger.info(f"Fetching feature values for Entity ID '{target_entity_id}' from FeatureView '{feature_view_name}'...")
+        
+        # Get the online store
+        fos = FeatureOnlineStore(online_store_name)
+        
+        # Get the feature view
+        fv = FeatureView(feature_view_name, feature_online_store_id=fos.name)
+        
+        # Read data for the entity
+        data = fv.read([target_entity_id])
+        
+        logger.info(f"Successfully fetched feature values for entity '{target_entity_id}'")
+        
+        return {
+            "status": "success",
+            "message": f"Successfully fetched feature values for entity ID '{target_entity_id}'.",
+            "entity_id": target_entity_id,
+            "features": data,
+            "online_store_name": online_store_name,
+            "feature_view_name": feature_view_name
+        }
+
+    except google_exceptions.NotFound:
+        return {"status": "not_found", "message": f"FeatureView '{feature_view_name}' or OnlineStore '{online_store_name}' not found."}
+    except google_exceptions.InvalidArgument as e:
+        error_message = f"Invalid argument for fetching feature values: {e}"
+        logger.error(error_message)
+        raise RuntimeError(error_message) from e
+    except google_exceptions.GoogleAPIError as e:
+        error_message = f"Google API error fetching feature values for '{feature_view_name}': {e}"
+        logger.error(error_message)
+        raise RuntimeError(error_message) from e
+    except Exception as e:
+        error_message = f"An unexpected error occurred fetching feature values for '{feature_view_name}': {repr(e)}"
+        logger.error(error_message)
+        raise RuntimeError(error_message) from e
+</file>
+
+<file path="online_store_operations.py">
+"""
+Online Store Operations for Vertex AI Feature Store.
+
+This module provides functions for creating and retrieving online stores
+in Vertex AI Feature Store using the modern vertexai SDK.
+"""
+
+import logging
+from typing import Dict, Any, Optional
+
+from shared_utils import init_aiplatform
+from vertexai.resources.preview import feature_store
+from google.api_core import exceptions as google_exceptions
+
+logger = logging.getLogger(__name__)
+
+def create_online_store(
+    project_id: str,
+    location: str,
+    online_store_id: str
+) -> Dict[str, Any]:
+    """
+    Creates an optimized online serving store with public endpoint.
+
+    Args:
+        project_id: Your GCP project ID.
+        location: Region where the online store will be created.
+        online_store_id: The name of the new FeatureOnlineStore instance.
+
+    Returns:
+        A dictionary with the status and details of the created online store.
+
+    Raises:
+        RuntimeError: If initialization or API call fails.
+        ValueError: If required parameters are missing.
+    """
+    if not project_id:
+        raise ValueError("project_id is required.")
+    if not online_store_id:
+        raise ValueError("online_store_id is required.")
+
+    try:
+        # Initialize AI Platform
+        init_aiplatform(project_id, location)
+        
+        logger.info(f"Creating optimized OnlineStore '{online_store_id}' in project '{project_id}'...")
+        
+        # Create optimized online store with public endpoint
+        fos = feature_store.FeatureOnlineStore.create_optimized_store(online_store_id)
+        
+        # Handle response
+        if fos and hasattr(fos, 'resource_name'):
+            logger.info(f"OnlineStore created: {fos.resource_name}")
+            online_store_name = fos.resource_name
+        else:
+            logger.info(f"OnlineStore creation initiated for: {online_store_id}")
+            online_store_name = f"projects/{project_id}/locations/{location}/featureOnlineStores/{online_store_id}"
+        
+        return {
+            "status": "success",
+            "message": f"Optimized OnlineStore '{online_store_id}' created successfully with public endpoint.",
+            "online_store_name": online_store_name,
+            "online_store_id": online_store_id,
+            "optimized": True,
+            "public_endpoint": True
+        }
+        
+    except google_exceptions.AlreadyExists:
+        return {"status": "already_exists", "message": f"OnlineStore '{online_store_id}' already exists."}
+    except google_exceptions.GoogleAPIError as e:
+        error_message = f"Google API error creating OnlineStore '{online_store_id}': {e}"
+        logger.error(error_message)
+        raise RuntimeError(error_message) from e
+    except Exception as e:
+        error_message = f"An unexpected error occurred creating OnlineStore '{online_store_id}': {repr(e)}"
+        logger.error(error_message)
+        raise RuntimeError(error_message) from e
+
+def get_online_store(project_id: str, location: str, online_store_name: str) -> Dict[str, Any]:
+    """
+    Retrieves details of a specific online store.
+
+    Args:
+        project_id: Your GCP project ID.
+        location: The GCP region of the online store.
+        online_store_name: The name of the online store instance.
+
+    Returns:
+        A dictionary containing online store details on success.
+
+    Raises:
+        RuntimeError: If initialization or API call fails.
+        ValueError: If required parameters are missing.
+    """
+    if not project_id:
+        raise ValueError("project_id is required.")
+    if not online_store_name:
+        raise ValueError("online_store_name is required.")
+
+    try:
+        # Initialize AI Platform
+        init_aiplatform(project_id, location)
+        
+        logger.info(f"Getting OnlineStore '{online_store_name}'...")
+        
+        # Get the online store
+        fos = feature_store.FeatureOnlineStore(online_store_name)
+        
+        return {
+            "status": "success", 
+            "message": f"Successfully retrieved OnlineStore '{online_store_name}'.",
+            "online_store_details": {
+                "name": fos.resource_name,
+                "display_name": getattr(fos, 'display_name', online_store_name),
+                "create_time": getattr(fos, 'create_time', None),
+                "update_time": getattr(fos, 'update_time', None),
+                "labels": getattr(fos, 'labels', {}),
+                "optimized": True  # Assuming optimized for modern stores
+            }
+        }
+        
+    except google_exceptions.NotFound:
+        return {"status": "not_found", "message": f"OnlineStore '{online_store_name}' not found."}
+    except google_exceptions.GoogleAPIError as e:
+        error_message = f"Google API error getting OnlineStore '{online_store_name}': {e}"
+        logger.error(error_message)
+        raise RuntimeError(error_message) from e
+    except Exception as e:
+        error_message = f"An unexpected error occurred getting OnlineStore '{online_store_name}': {repr(e)}"
+        logger.error(error_message)
+        raise RuntimeError(error_message) from e
+</file>
+
+<file path="requirements.txt">
+# Vertex AI Feature Store Dependencies
+# Core Google Cloud AI Platform SDK and Vertex AI SDK
+google-cloud-aiplatform>=1.38.0
+google-cloud-aiplatform[vertex-ai]>=1.38.0
+
+# Authentication and Core Google Cloud libraries
+google-auth>=2.15.0
+google-auth-oauthlib>=0.8.0
+google-auth-httplib2>=0.1.0
+
+# Additional Google Cloud dependencies
+google-api-core>=2.11.0
+google-cloud-core>=2.3.0
+
+# Protocol Buffers (required for API communication)
+protobuf>=4.21.0
+
+# HTTP and networking
+requests>=2.28.0
+urllib3>=1.26.0
+
+# Date/time handling
+python-dateutil>=2.8.0
+
+# Logging and utilities (optional but recommended)
+structlog>=22.3.0
+</file>
+
+<file path="shared_utils.py">
+"""
+Shared utilities for Vertex AI Feature Store operations.
+
+This module provides common utilities and helper functions for Vertex AI Feature Store operations
+using the modern vertexai.resources.preview.feature_store SDK.
+"""
+
+import logging
+import os
+from typing import Any
+
+# Import necessary libraries from Google Cloud AI Platform SDK
+try:
+    from google.cloud import aiplatform
+    from vertexai.resources.preview import feature_store
+    from google.api_core import exceptions as google_exceptions
+except ImportError:
+    # Provide a helpful error message if libraries are not installed
+    raise ImportError(
+        "Required Google Cloud AI Platform libraries are not installed. "
+        "Please install them using: pip install google-cloud-aiplatform"
+    )
+
+logger = logging.getLogger(__name__)
+
+# === CONSTANTS ===
+DEFAULT_LOCATION = "us-central1"
+DEFAULT_BQ_PROJECT_ID = os.getenv("DEFAULT_BQ_PROJECT_ID")
+DEFAULT_GCP_PROJECT_ID = os.getenv("GOOGLE_CLOUD_PROJECT")
+
+# ===============================================================================
+# CORE INITIALIZATION
+# ===============================================================================
+
+def init_aiplatform(project_id: str, location: str) -> None:
+    """
+    Initialize AI Platform with project and location.
+
+    Args:
+        project_id: The GCP project ID.
+        location: The GCP region.
+    
+    Raises:
+        RuntimeError: If initialization fails.
+    """
+    try:
+        aiplatform.init(project=project_id, location=location)
+        logger.info(f"AI Platform initialized for project '{project_id}' in location '{location}'")
+    except Exception as e:
+        logger.error(f"Failed to initialize AI Platform: {e}")
+        raise RuntimeError(f"Failed to initialize AI Platform: {e}")
+
+# ===============================================================================
+# HELPER FUNCTIONS
+# ===============================================================================
+
+def get_default_project_id() -> str:
+    """Helper to get default project ID, falling back to environment variable."""
+    return DEFAULT_GCP_PROJECT_ID or "your-gcp-project-id"
+
+def get_default_location() -> str:
+    """Helper to get default location, falling back to env var or default."""
+    return os.getenv("GOOGLE_CLOUD_LOCATION", DEFAULT_LOCATION)
+</file>
+
+<file path="sync_operations.py">
+"""
+Sync Operations for Vertex AI Feature Store.
+
+This module provides functions for triggering data synchronization
+in Vertex AI Feature Store using the modern vertexai SDK.
+"""
+
+import logging
+from typing import Dict, Any
+
+from shared_utils import init_aiplatform
+from vertexai.resources.preview.feature_store import FeatureOnlineStore, FeatureView
+from google.api_core import exceptions as google_exceptions
+
+logger = logging.getLogger(__name__)
+
+def sync_feature_view(
+    project_id: str,
+    location: str,
+    online_store_name: str,
+    feature_view_name: str
+) -> Dict[str, Any]:
+    """
+    Manually triggers a data sync operation for a feature view.
+
+    Args:
+        project_id: Your GCP project ID.
+        location: The GCP region of the online store.
+        online_store_name: The name of the online store containing the feature view.
+        feature_view_name: The name of the feature view to sync.
+
+    Returns:
+        A dictionary with the status of the sync operation.
+
+    Raises:
+        RuntimeError: If initialization or API call fails.
+        ValueError: If required parameters are missing.
+    """
+    if not project_id:
+        raise ValueError("project_id is required.")
+    if not online_store_name:
+        raise ValueError("online_store_name is required.")
+    if not feature_view_name:
+        raise ValueError("feature_view_name is required.")
+
+    try:
+        # Initialize AI Platform
+        init_aiplatform(project_id, location)
+        
+        logger.info(f"Triggering sync for FeatureView '{feature_view_name}'...")
+        
+        # Get the online store
+        fos = FeatureOnlineStore(online_store_name)
+        
+        # Get the feature view
+        fv = FeatureView(feature_view_name, feature_online_store_id=fos.name)
+        
+        # Trigger sync operation
+        sync_response = fv.sync()
+        
+        logger.info(f"Sync operation triggered for FeatureView '{feature_view_name}'")
+
+        return {
+            "status": "success",
+            "message": f"Sync operation triggered for FeatureView '{feature_view_name}'.",
+            "online_store_name": online_store_name,
+            "feature_view_name": feature_view_name,
+            "sync_response": sync_response
+        }
+        
+    except google_exceptions.NotFound:
+        return {"status": "not_found", "message": f"FeatureView '{feature_view_name}' not found."}
+    except google_exceptions.GoogleAPIError as e:
+        error_message = f"Google API error triggering sync for FeatureView '{feature_view_name}': {e}"
+        logger.error(error_message)
+        raise RuntimeError(error_message) from e
+    except Exception as e:
+        error_message = f"An unexpected error occurred triggering sync for FeatureView '{feature_view_name}': {repr(e)}"
+        logger.error(error_message)
+        raise RuntimeError(error_message) from e
+</file>
+
+</files>
