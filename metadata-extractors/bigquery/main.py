@@ -24,6 +24,7 @@ async def main():
         sa_creds_json = os.getenv('BIGQUERY_SA_CREDS_JSON')
         project_id = os.getenv('BIGQUERY_PROJECT_ID')
         client_email = os.getenv('BIGQUERY_CLIENT_EMAIL')
+        region = os.getenv('BIGQUERY_REGION', 'US')  # Default to 'US' if not set
         
         if not all([sa_creds_json, project_id, client_email]):
             print("❌ Missing required environment variables:")
@@ -41,13 +42,14 @@ async def main():
         print("="*40)
         print(f"📁 Project: {credentials['project_id']}")
         print(f"👤 Service Account: {credentials['client_email']}")
+        print(f"🌍 Region: {region}")
         print()
         
         print("🔄 Extracting metadata...")
         start_time = datetime.now()
         
         # Extract all metadata
-        metadata = await extract_metadata(credentials)
+        metadata = await extract_metadata(credentials, region=region)
         
         end_time = datetime.now()
         duration = (end_time - start_time).total_seconds()

@@ -1,23 +1,12 @@
-# Common dependencies for all metadata extractors
-
-# BigQuery
+# Core BigQuery client
 google-cloud-bigquery>=3.0.0
 google-auth>=2.0.0
 
 # Environment variables
 python-dotenv>=1.0.0
 
-# Async support
-aiohttp>=3.8.0
-asyncio-throttle>=1.0.0
-
-# HTTP requests
-requests>=2.25.0
-
-# Data handling
+# Data validation and serialization
 pydantic>=2.0.0
-pandas>=1.5.0
 
-# Logging and utilities
-structlog>=23.0.0
+# Resiliency for API calls
 tenacity>=8.0.0 

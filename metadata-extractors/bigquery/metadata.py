@@ -24,114 +24,60 @@ except ImportError:
     service_account = None
     gcp_exceptions = None
 
+# Add Pydantic imports
+from pydantic import BaseModel, Field
+
+# Add tenacity imports for retries
+from tenacity import retry, stop_after_attempt, wait_exponential
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class BigQueryDatasetMetadata:
-    """Represents BigQuery dataset metadata"""
-    
-    def __init__(self, dataset_id: str, description: str = None, owner: str = None, 
-                 created_at: datetime = None, default_table_expiration: int = None,
-                 labels: Dict[str, str] = None, table_count: int = 0):
-        self.dataset_id = dataset_id
-        self.description = description
-        self.owner = owner
-        self.created_at = created_at
-        self.default_table_expiration = default_table_expiration
-        self.labels = labels or {}
-        self.table_count = table_count
-
-    def to_dict(self) -> Dict[str, Any]:
-        return {
-            "dataset_id": self.dataset_id,
-            "description": self.description,
-            "owner": self.owner,
-            "created_at": self.created_at.isoformat() if hasattr(self.created_at, 'isoformat') and self.created_at else str(self.created_at) if self.created_at else None,
-            "default_table_expiration": self.default_table_expiration,
-            "labels": self.labels,
-            "table_count": self.table_count
-        }
+class BigQueryDatasetMetadata(BaseModel):
+    dataset_id: str
+    description: Optional[str] = None
+    owner: Optional[str] = None
+    created_at: Optional[datetime] = None
+    default_table_expiration: Optional[int] = None
+    labels: Dict[str, str] = Field(default_factory=dict)
+    table_count: int = 0
 
 
-class TableMetadata:
-    """Represents BigQuery table metadata"""
-    
-    def __init__(self, table_name: str, dataset_name: str, project_id: str,
-                 description: str = None, owner: str = None, created_at: datetime = None,
-                 modified_at: datetime = None, row_count: int = None, size_bytes: int = None,
-                 partition_info: Dict = None, clustering_keys: List[str] = None,
-                 columns: List[Dict] = None):
-        self.table_name = table_name
-        self.dataset_name = dataset_name
-        self.project_id = project_id
-        self.description = description
-        self.owner = owner
-        self.created_at = created_at
-        self.modified_at = modified_at
-        self.row_count = row_count
-        self.size_bytes = size_bytes
-        self.partition_info = partition_info or {}
-        self.clustering_keys = clustering_keys or []
-        self.columns = columns or []
-
-    def to_dict(self) -> Dict[str, Any]:
-        return {
-            "table_name": self.table_name,
-            "dataset_name": self.dataset_name,
-            "project_id": self.project_id,
-            "description": self.description,
-            "owner": self.owner,
-            "created_at": self.created_at.isoformat() if hasattr(self.created_at, 'isoformat') and self.created_at else str(self.created_at) if self.created_at else None,
-            "modified_at": self.modified_at.isoformat() if hasattr(self.modified_at, 'isoformat') and self.modified_at else str(self.modified_at) if self.modified_at else None,
-            "row_count": self.row_count,
-            "size_bytes": self.size_bytes,
-            "partition_info": self.partition_info,
-            "clustering_keys": self.clustering_keys,
-            "columns": self.columns
-        }
+class TableMetadata(BaseModel):
+    table_name: str
+    dataset_name: str
+    project_id: str
+    description: Optional[str] = None
+    owner: Optional[str] = None
+    created_at: Optional[datetime] = None
+    modified_at: Optional[datetime] = None
+    row_count: Optional[int] = None
+    size_bytes: Optional[int] = None
+    partition_info: Dict = Field(default_factory=dict)
+    clustering_keys: List[str] = Field(default_factory=list)
+    columns: List[Dict] = Field(default_factory=list)
 
 
-class QueryMetadata:
-    """Represents BigQuery query metadata"""
-    
-    def __init__(self, query_id: str, query_text: str, user_email: str,
-                 start_time: datetime, end_time: datetime = None, duration_ms: int = None,
-                 bytes_scanned: int = None, cached: bool = False, status: str = None,
-                 referenced_tables: List[str] = None, importance_score: float = 0.0):
-        self.query_id = query_id
-        self.query_text = query_text
-        self.user_email = user_email
-        self.start_time = start_time
-        self.end_time = end_time
-        self.duration_ms = duration_ms
-        self.bytes_scanned = bytes_scanned
-        self.cached = cached
-        self.status = status
-        self.referenced_tables = referenced_tables or []
-        self.importance_score = importance_score
-
-    def to_dict(self) -> Dict[str, Any]:
-        return {
-            "query_id": self.query_id,
-            "query_text": self.query_text,
-            "user_email": self.user_email,
-            "start_time": self.start_time.isoformat() if hasattr(self.start_time, 'isoformat') and self.start_time else str(self.start_time) if self.start_time else None,
-            "end_time": self.end_time.isoformat() if hasattr(self.end_time, 'isoformat') and self.end_time else str(self.end_time) if self.end_time else None,
-            "duration_ms": self.duration_ms,
-            "bytes_scanned": self.bytes_scanned,
-            "cached": self.cached,
-            "status": self.status,
-            "referenced_tables": self.referenced_tables,
-            "importance_score": self.importance_score
-        }
+class QueryMetadata(BaseModel):
+    query_id: str
+    query_text: str
+    user_email: str
+    start_time: Optional[datetime] = None
+    end_time: Optional[datetime] = None
+    duration_ms: Optional[int] = None
+    bytes_scanned: Optional[int] = None
+    cached: bool = False
+    status: Optional[str] = None
+    referenced_tables: List[str] = Field(default_factory=list)
+    importance_score: float = 0.0
 
 
 class BigQueryMetadataExtractor:
     """Main class for extracting metadata from BigQuery"""
     
-    def __init__(self, credentials: Dict[str, Any]):
+    def __init__(self, credentials: Dict[str, Any], region: str = 'US'):
         """
         Initialize BigQuery metadata extractor
         
@@ -140,10 +86,12 @@ class BigQueryMetadataExtractor:
                 - sa_creds_json: Service account credentials as dict
                 - project_id: GCP project ID
                 - client_email: Service account email
+            region: BigQuery region for job history queries (default: 'US')
         """
         self.credentials = credentials
         self.client = None
         self.project_id = credentials.get('project_id')
+        self.region = region  # Store the region
         
         if not bigquery:
             raise ImportError("google-cloud-bigquery is required but not installed")
@@ -352,7 +300,7 @@ class BigQueryMetadataExtractor:
                 cache_hit,
                 state,
                 referenced_tables
-            FROM `{self.project_id}.region-us.INFORMATION_SCHEMA.JOBS_BY_PROJECT`
+            FROM `{self.project_id}.region-{self.region}.INFORMATION_SCHEMA.JOBS_BY_PROJECT`
             WHERE job_type = 'QUERY'
                 AND state = 'DONE'
                 AND start_time >= '{start_date.isoformat()}'
@@ -415,6 +363,11 @@ class BigQueryMetadataExtractor:
             
         return min(score, 10.0)  # Cap at 10.0
 
+    @retry(wait=wait_exponential(multiplier=1, min=2, max=30), stop=stop_after_attempt(5))
+    async def _get_table_with_retry(self, table_ref: bigquery.TableReference) -> bigquery.Table:
+        """Wrapper around client.get_table to provide async execution and retries."""
+        return await asyncio.to_thread(self.client.get_table, table_ref)
+
     async def get_document_counts_by_subtype(self) -> Dict[str, int]:
         """
         Get document counts by subtype (datasets, tables, views, etc.)
@@ -457,7 +410,8 @@ class BigQueryMetadataExtractor:
             return {}
 
 
-async def extract_metadata(credentials: Dict[str, Any], 
+async def extract_metadata(credentials: Dict[str, Any],
+                         region: str = 'US',  # Add region parameter
                          include_datasets: bool = True,
                          include_tables: bool = True, 
                          include_queries: bool = True,
@@ -467,6 +421,7 @@ async def extract_metadata(credentials: Dict[str, Any],
     
     Args:
         credentials: BigQuery credentials dictionary
+        region: BigQuery region for job history queries
         include_datasets: Whether to include dataset metadata
         include_tables: Whether to include table metadata  
         include_queries: Whether to include query history
@@ -475,7 +430,7 @@ async def extract_metadata(credentials: Dict[str, Any],
     Returns:
         Dict[str, Any]: Complete metadata extraction results
     """
-    extractor = BigQueryMetadataExtractor(credentials)
+    extractor = BigQueryMetadataExtractor(credentials, region=region)  # Pass region
     
     # Test connection first
     success, message = await extractor.test_connection()
@@ -489,15 +444,15 @@ async def extract_metadata(credentials: Dict[str, Any],
     
     if include_datasets:
         datasets = await extractor.get_dataset_metadata()
-        results["datasets"] = [d.to_dict() for d in datasets]
+        results["datasets"] = [d.model_dump() for d in datasets]  # Use .model_dump()
     
     if include_tables:
         tables = await extractor.get_table_metadata()
-        results["tables"] = [t.to_dict() for t in tables]
+        results["tables"] = [t.model_dump() for t in tables]  # Use .model_dump()
     
     if include_queries:
         queries = await extractor.get_query_history(query_days_back)
-        results["queries"] = [q.to_dict() for q in queries]
+        results["queries"] = [q.model_dump() for q in queries]  # Use .model_dump()
     
     return results
 
