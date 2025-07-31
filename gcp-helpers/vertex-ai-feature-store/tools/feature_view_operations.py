@@ -9,7 +9,7 @@ import logging
 import requests
 import json
 import subprocess
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Union
 
 from shared_utils import init_aiplatform
 from google.api_core import exceptions as google_exceptions
@@ -21,8 +21,9 @@ def create_feature_view(
     location: str,
     online_store_name: str,
     feature_view_name: str,
-    feature_registry_source: Dict[str, Any],
-    sync_config: Optional[Dict[str, Any]] = None
+    feature_group_ids: List[str],
+    feature_ids_list: List[List[str]],
+    sync_cron: Optional[str] = None
 ) -> Dict[str, Any]:
     """
     Creates a feature view, linking feature groups and an online store.
@@ -32,16 +33,22 @@ def create_feature_view(
         location: Region of the feature view.
         online_store_name: The name of the online store to associate with.
         feature_view_name: The name for the new feature view.
-        feature_registry_source: Dictionary containing feature_registry_source with feature_groups.
-                                Example: {"feature_groups": [{"feature_group_id": "fg_1", "feature_ids": ["feat_a", "feat_b"]}]}
-        sync_config: Optional configuration for data synchronization.
-                    Example: {"cron": "0 0 * * *"}
+        feature_group_ids: List of feature group IDs to include.
+                          Example: ["fg_1", "fg_2"]
+        feature_ids_list: List of feature ID lists corresponding to each feature group.
+                         Example: [["feat_a", "feat_b"], ["feat_c"]]
+        sync_cron: Optional cron schedule for data synchronization.
+                  Example: "0 0 * * *"
 
     Returns:
         A dictionary with the status and details of the created feature view.
     """
-    if not project_id or not online_store_name or not feature_view_name or not feature_registry_source:
-        raise ValueError("All required parameters must be provided.")
+    if not project_id or not online_store_name or not feature_view_name:
+        raise ValueError("project_id, online_store_name, and feature_view_name are required.")
+    if not feature_group_ids or not feature_ids_list:
+        raise ValueError("feature_group_ids and feature_ids_list are required.")
+    if len(feature_group_ids) != len(feature_ids_list):
+        raise ValueError("feature_group_ids and feature_ids_list must have the same length.")
 
     try:
         init_aiplatform(project_id, location)
@@ -63,14 +70,26 @@ def create_feature_view(
         # Construct the API URL
         api_url = f"https://{location}-aiplatform.googleapis.com/v1/projects/{project_id}/locations/{location}/featureOnlineStores/{online_store_name}/featureViews?feature_view_id={feature_view_name}"
         
+        # Build the feature groups structure
+        feature_groups = []
+        for fg_id, feat_ids in zip(feature_group_ids, feature_ids_list):
+            feature_groups.append({
+                "feature_group_id": fg_id,
+                "feature_ids": feat_ids
+            })
+        
         # Prepare the request body
-        request_body = {
-            "feature_registry_source": feature_registry_source
+        request_body: Dict[str, Any] = {
+            "feature_registry_source": {
+                "feature_groups": feature_groups
+            }
         }
         
         # Add sync config if provided
-        if sync_config:
-            request_body["sync_config"] = sync_config
+        if sync_cron:
+            request_body["sync_config"] = {
+                "cron": sync_cron
+            }
         
         logger.info(f"API URL: {api_url}")
         logger.info(f"Request body: {json.dumps(request_body, indent=2)}")
@@ -96,8 +115,9 @@ def create_feature_view(
             "message": f"FeatureView '{feature_view_name}' created successfully.",
             "feature_view_name": response_data.get('name', f"{online_store_name}/featureViews/{feature_view_name}"),
             "online_store_name": online_store_name,
-            "feature_registry_source": feature_registry_source,
-            "sync_config": sync_config,
+            "feature_group_ids": feature_group_ids,
+            "feature_ids_list": feature_ids_list,
+            "sync_cron": sync_cron,
             "response_data": response_data
         }
         

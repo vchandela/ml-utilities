@@ -19,29 +19,21 @@ def test_create_feature_view():
     # Parameters - using default values
     project_id = "ml-tool-playground"
     location = "us-central1"
-    online_store_name = "test_online_store"
-    feature_view_name = "test_feature_view"
+    online_store_name = "user_serving_store"
+    feature_view_name = "user_engagements_live_view"
 
-    feature_registry_source = {
-        "feature_groups": [
-            {
-                "feature_group_id": "test_fg",
-                "feature_ids": ["test_feature"]
-            }
-        ]
-    }
-
-    sync_config = {
-        "cron": "0 0 * * *"
-    }
+    feature_group_ids = ["seekho_user_engagements_group_v2"]
+    feature_ids_list = [["age_group"]]
+    sync_cron = "0 0 * * *"
     print("\n" + "="*50)
     print(f"Testing create_feature_view with:")
     print(f"  project_id: {project_id}")
     print(f"  location: {location}")
     print(f"  online_store_name: {online_store_name}")
     print(f"  feature_view_name: {feature_view_name}")
-    print(f"  feature_registry_source: {json.dumps(feature_registry_source, indent=2)}")
-    print(f"  sync_config: {sync_config}")
+    print(f"  feature_group_ids: {feature_group_ids}")
+    print(f"  feature_ids_list: {feature_ids_list}")
+    print(f"  sync_cron: {sync_cron}")
     print("="*50)
     print()
     
@@ -51,8 +43,9 @@ def test_create_feature_view():
             location=location,
             online_store_name=online_store_name,
             feature_view_name=feature_view_name,
-            feature_registry_source=feature_registry_source,
-            sync_config=sync_config
+            feature_group_ids=feature_group_ids,
+            feature_ids_list=feature_ids_list,
+            sync_cron=sync_cron
         )
         print("✅ Function executed successfully!")
         print("Result:")

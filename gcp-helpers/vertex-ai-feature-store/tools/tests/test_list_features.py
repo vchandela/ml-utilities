@@ -18,7 +18,7 @@ def test_list_features():
     # Parameters - using default values
     project_id = "ml-tool-playground"
     location = "us-central1"
-    feature_group_id = "test_fg"
+    feature_group_id = "seekho_user_engagements_group"
     
     print("\n" + "="*50)
     print(f"Testing list_features with:")

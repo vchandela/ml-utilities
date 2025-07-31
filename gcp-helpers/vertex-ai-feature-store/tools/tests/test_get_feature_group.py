@@ -18,7 +18,7 @@ def test_get_feature_group():
     # Parameters - using default values
     project_id = "ml-tool-playground"
     location = "us-central1"
-    feature_group_id = "test_fg"
+    feature_group_id = "seekho_user_engagements_fg"
     
     print("\n" + "="*50)
     print(f"Testing get_feature_group with:")

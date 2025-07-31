@@ -18,8 +18,8 @@ def test_fetch_feature_values():
     # Parameters - using default values
     project_id = "ml-tool-playground"
     location = "us-central1"
-    online_store_name = "test_online_store"
-    feature_view_name = "test_feature_view"
+    online_store_name = "user_profile_serving"
+    feature_view_name = "	v_user_profile_features_v2"
     target_entity_id = "user_89"
     format_value = "KEY_VALUE"
     
