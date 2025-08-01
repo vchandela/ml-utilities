@@ -352,7 +352,7 @@ class RedashMetadataExtractor:
             return_exceptions=True
         )
         
-        # Create query_id -> query_data mapping
+        # Create query_id -> query_data mapping (ONLY successful fetches)
         query_data_map = {}
         valid_query_count = 0
         for i, query_data in enumerate(all_query_data):
@@ -362,14 +362,15 @@ class RedashMetadataExtractor:
         
         logger.info(f"Level 2 complete: {valid_query_count}/{len(unique_query_ids)} queries fetched successfully")
         
-        # Count widgets that have valid queries
-        widgets_with_valid_queries = 0
+        # Count widgets that have valid queries (MATCHING ORIGINAL LOGIC)
+        # Only count widgets whose query_id exists AND whose query data was successfully fetched
+        widgets_with_accessible_queries = 0
         for widget_id, query_id in widget_to_query_map.items():
-            if query_id in query_data_map:
-                widgets_with_valid_queries += 1
+            if query_id in query_data_map:  # Query exists AND was successfully fetched
+                widgets_with_accessible_queries += 1
         
-        logger.info(f"Widget counting complete: {widgets_with_valid_queries} widgets have accessible queries")
-        return widgets_with_valid_queries
+        logger.info(f"Widget counting complete: {widgets_with_accessible_queries} widgets have accessible queries (matching original logic)")
+        return widgets_with_accessible_queries
 
 
 async def extract_metadata(credentials: Dict[str, Any]) -> Dict[str, Any]:

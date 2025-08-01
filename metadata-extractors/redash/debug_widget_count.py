@@ -2,7 +2,7 @@
 """
 Debug Widget Counting
 
-Detailed analysis of widget counting to understand why we get 2086 instead of ~663
+Detailed analysis of widget counting per dashboard to understand distribution
 """
 
 import os
@@ -13,7 +13,7 @@ from metadata import RedashMetadataExtractor
 load_dotenv()
 
 async def debug_widget_counting():
-    """Detailed analysis of widget counting"""
+    """Detailed analysis of widget counting per dashboard"""
     
     credentials = {
         'api_url': os.getenv('REDASH_API_URL'),
@@ -22,107 +22,102 @@ async def debug_widget_counting():
     
     extractor = RedashMetadataExtractor(credentials)
     
-    print("🔍 Debugging Widget Counting")
-    print("="*50)
-    
     # Test connection and get version
     await extractor.test_connection()
     await extractor._detect_version()
     
     # Get dashboards
     dashboards = await extractor.get_dashboards()
-    print(f"📊 Total dashboards in list: {len(dashboards)}")
     
     # Get dashboard details with version-appropriate IDs
     use_slug = extractor._should_use_slug()
-    print(f"🏷️  Using {'slug' if use_slug else 'numeric ID'} identifiers")
     
     # Get all dashboard details
-    print(f"\n🔄 Fetching dashboard details...")
     dashboard_details = await asyncio.gather(
         *[extractor._get_dashboard_with_id(dashboard, use_slug) for dashboard in dashboards],
         return_exceptions=True
     )
     
     valid_dashboards = [d for d in dashboard_details if d and not isinstance(d, Exception)]
-    print(f"✅ Accessible dashboards: {len(valid_dashboards)}/{len(dashboards)}")
     
-    # Analyze widget patterns
-    total_widgets = 0
-    widgets_with_viz = 0
-    widgets_with_query_id = 0
-    widget_types = {}
-    sample_widgets = []
+    # Prepare output lines
+    output_lines = []
+    output_lines.append("Dashboard Widget Analysis")
+    output_lines.append("=" * 80)
+    output_lines.append(f"Total Dashboards: {len(dashboards)}")
+    output_lines.append(f"Accessible Dashboards: {len(valid_dashboards)}")
+    output_lines.append("")
     
-    for i, dashboard in enumerate(valid_dashboards):
+    # Analyze each dashboard
+    total_widgets_across_all = 0
+    total_widget_types = {}
+    
+    for dashboard in valid_dashboards:
         if not dashboard or not isinstance(dashboard, dict) or 'widgets' not in dashboard:
             continue
             
+        dashboard_name = dashboard.get('name', 'Unnamed Dashboard')
+        dashboard_id = dashboard.get('id', 'Unknown ID')
+        dashboard_slug = dashboard.get('slug', 'no-slug')
         dashboard_widgets = dashboard['widgets']
-        total_widgets += len(dashboard_widgets)
+        
+        # Count widgets by type for this dashboard
+        dashboard_widget_types = {}
+        widgets_with_queries = 0
         
         for widget in dashboard_widgets:
-            # Count widgets with visualization
-            if widget.get('visualization'):
-                widgets_with_viz += 1
-                
             # Count widgets with query IDs
             visualization = widget.get("visualization", {})
             query_id = visualization.get("query", {}).get("id") if visualization else None
             
             if query_id:
-                widgets_with_query_id += 1
+                widgets_with_queries += 1
                 
             # Track widget types
             widget_type = "text"  # default
             if visualization:
                 widget_type = visualization.get("type", "unknown")
-            widget_types[widget_type] = widget_types.get(widget_type, 0) + 1
             
-            # Collect samples for first few dashboards
-            if i < 3 and len(sample_widgets) < 10:
-                sample_widgets.append({
-                    'dashboard_id': dashboard.get('id'),
-                    'widget_id': widget.get('id'),
-                    'has_viz': bool(widget.get('visualization')),
-                    'viz_type': widget_type,
-                    'has_query_id': bool(query_id),
-                    'query_id': query_id
-                })
+            # Count for this dashboard
+            dashboard_widget_types[widget_type] = dashboard_widget_types.get(widget_type, 0) + 1
+            
+            # Count for overall totals
+            total_widget_types[widget_type] = total_widget_types.get(widget_type, 0) + 1
+        
+        total_widgets_across_all += len(dashboard_widgets)
+        
+        # Add dashboard info to output
+        output_lines.append(f"Dashboard: {dashboard_name}")
+        output_lines.append(f"  ID: {dashboard_id}, Slug: {dashboard_slug}")
+        output_lines.append(f"  Total Widgets: {len(dashboard_widgets)}")
+        output_lines.append(f"  Widgets with Queries: {widgets_with_queries}")
+        
+        if dashboard_widget_types:
+            output_lines.append(f"  Widget Types:")
+            for widget_type, count in sorted(dashboard_widget_types.items(), key=lambda x: x[1], reverse=True):
+                output_lines.append(f"    - {widget_type}: {count}")
+        else:
+            output_lines.append(f"  No widgets found")
+        
+        output_lines.append("")  # Blank line between dashboards
     
-    print(f"\n📊 Widget Analysis:")
-    print(f"   - Total widgets across all dashboards: {total_widgets}")
-    print(f"   - Widgets with visualization: {widgets_with_viz}")
-    print(f"   - Widgets with query_id: {widgets_with_query_id}")
-    print(f"   - Expected count: ~663")
-    print(f"   - Current count: {widgets_with_query_id}")
-    print(f"   - Ratio: {widgets_with_query_id/663:.1f}x higher than expected")
+    # Add summary
+    output_lines.append("=" * 80)
+    output_lines.append("SUMMARY")
+    output_lines.append("=" * 80)
+    output_lines.append(f"Total Widgets Across All Dashboards: {total_widgets_across_all}")
+    output_lines.append("")
+    output_lines.append("Overall Widget Type Distribution:")
+    for widget_type, count in sorted(total_widget_types.items(), key=lambda x: x[1], reverse=True):
+        output_lines.append(f"  - {widget_type}: {count}")
     
-    print(f"\n📊 Widget Types:")
-    for widget_type, count in sorted(widget_types.items(), key=lambda x: x[1], reverse=True):
-        print(f"   - {widget_type}: {count}")
+    # Write to test.txt
+    with open('test.txt', 'w') as f:
+        for line in output_lines:
+            f.write(line + '\n')
     
-    print(f"\n🔍 Sample Widgets (first 10):")
-    for widget in sample_widgets:
-        print(f"   - Dashboard {widget['dashboard_id']}, Widget {widget['widget_id']}: "
-              f"type={widget['viz_type']}, has_query={widget['has_query_id']}, query_id={widget['query_id']}")
-    
-    # Check if there are duplicate query IDs (widgets sharing queries)
-    all_query_ids = []
-    for dashboard in valid_dashboards:
-        if not dashboard or not isinstance(dashboard, dict) or 'widgets' not in dashboard:
-            continue
-        for widget in dashboard['widgets']:
-            visualization = widget.get("visualization", {})
-            query_id = visualization.get("query", {}).get("id") if visualization else None
-            if query_id:
-                all_query_ids.append(query_id)
-    
-    unique_queries = len(set(all_query_ids))
-    print(f"\n🔗 Query Sharing Analysis:")
-    print(f"   - Total widget-query pairs: {len(all_query_ids)}")
-    print(f"   - Unique queries: {unique_queries}")
-    print(f"   - Avg widgets per query: {len(all_query_ids)/unique_queries:.1f}")
+    print(f"✅ Analysis complete! Results written to test.txt")
+    print(f"📊 Summary: {len(valid_dashboards)} dashboards, {total_widgets_across_all} total widgets")
 
 if __name__ == "__main__":
     asyncio.run(debug_widget_counting()) 
