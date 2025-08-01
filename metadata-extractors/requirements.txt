@@ -1,12 +1,15 @@
-# Core BigQuery client
+# Core BigQuery client libraries
 google-cloud-bigquery>=3.0.0
 google-auth>=2.0.0
 
-# Environment variables
+# Environment variable loading
 python-dotenv>=1.0.0
 
 # Data validation and serialization
 pydantic>=2.0.0
 
-# Resiliency for API calls
-tenacity>=8.0.0 
+# Resiliency for API calls (used by both BigQuery and Redash connectors)
+tenacity>=8.0.0
+
+# Redash Connector Dependencies
+requests>=2.28.1 

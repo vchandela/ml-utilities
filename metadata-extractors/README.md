@@ -1,6 +1,12 @@
-# BigQuery Metadata Counter
+# Metadata Extractors
 
-A high-performance Python tool that efficiently counts BigQuery resources across your Google Cloud project.
+High-performance Python tools for extracting metadata from various data platforms.
+
+## Components
+
+### BigQuery Metadata Counter
+
+A tool that efficiently counts BigQuery resources across your Google Cloud project.
 
 ## What It Does
 
@@ -84,4 +90,53 @@ Built for production use with:
 - Async/await concurrency patterns
 - Automatic retry logic for API calls  
 - Clean error handling and logging
-- Modular, testable code structure 
+- Modular, testable code structure
+
+---
+
+### Redash Metadata Extractor
+
+A tool that efficiently extracts metadata from Redash instances.
+
+#### What It Does
+
+Provides **three key counts**:
+- **Dashboards**: Total number of dashboards
+- **Widgets**: Number of widgets with associated queries (excludes text-only widgets)
+- **Saved Queries**: Total number of saved queries in the Redash instance
+
+#### Quick Start
+
+1. **Install Dependencies**: `pip install -r requirements.txt`
+2. **Set Up Environment**: Add your Redash credentials to `.env`:
+   ```bash
+   REDASH_API_URL=https://your.redash.instance
+   REDASH_API_KEY=your_redash_api_key
+   ```
+3. **Run**: `python redash/main.py`
+
+#### Sample Output
+
+```
+🔧 Redash Metadata Extractor
+========================================
+🌐 Redash URL: https://your.redash.instance
+🔑 API Key: ************5678
+
+🔄 Extracting metadata...
+✅ Extraction completed in 4.35 seconds!
+
+📊 Results:
+   - Dashboards: 15
+   - Widgets: 42
+   - Saved Queries: 128
+```
+
+#### Features
+
+- ⚡ **Fast**: Concurrent processing for optimal performance
+- 🔄 **Robust**: Automatic retry logic with exponential backoff
+- 🎯 **Smart filtering**: Only counts widgets that have associated queries
+- 🌐 **Version-aware**: Automatically detects Redash version for compatibility
+
+For detailed documentation, see [redash/README.md](redash/README.md). 
