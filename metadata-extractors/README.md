@@ -139,4 +139,106 @@ Provides **three key counts**:
 - 🎯 **Smart filtering**: Only counts widgets that have associated queries
 - 🌐 **Version-aware**: Automatically detects Redash version for compatibility
 
-For detailed documentation, see [redash/README.md](redash/README.md). 
+For detailed documentation, see [redash/README.md](redash/README.md).
+
+---
+
+### Bitbucket Connector
+
+A high-performance tool that extracts aggregate counts from Bitbucket workspaces using concurrent processing.
+
+#### What It Does
+
+Provides **four key counts**:
+- **Repositories**: Total number of repositories in the workspace
+- **Files**: Number of text files (<100MB, excludes Git metadata)
+- **Pull Requests**: Total number of pull requests (open and closed)
+- **Commits**: Total number of commits across all repositories
+
+#### Key Features
+
+- ⚡ **Ultra-fast**: Concurrent processing with configurable parallelism (default: 20 parallel requests)
+- 📁 **Smart filtering**: Only counts text files, excludes binaries and Git metadata
+- 🔄 **Robust**: Automatic token refresh and retry logic with exponential backoff
+- 📊 **Comprehensive**: Processes up to 1000 repositories per workspace
+- 🎯 **Count-focused**: Returns clean aggregate numbers instead of detailed metadata
+
+#### Quick Start
+
+1. **Install Dependencies**: `pip install -r requirements.txt`
+2. **Set Up Environment**: Add your Bitbucket credentials to `.env`:
+   ```bash
+   BITBUCKET_CLIENT_ID=your_bitbucket_client_id
+   BITBUCKET_CLIENT_SECRET=your_bitbucket_client_secret
+   BITBUCKET_ACCESS_TOKEN=your_bitbucket_access_token
+   BITBUCKET_REFRESH_TOKEN=your_bitbucket_refresh_token
+   ```
+3. **Run**: `python bitbucket/main.py`
+
+#### Sample Output
+
+```
+🔧 Bitbucket Repository Metrics
+========================================
+🌐 Workspace: your-workspace-name
+🔑 Processing first workspace found
+
+🔄 Fetching repository metrics...
+✅ Bitbucket metrics collection completed in 15.32 seconds!
+
+--- Bitbucket Workspace Metrics ---
+Workspace: your-workspace-name
+----------------------------------
+Global Counts:
+  Total Repositories: 42
+  Total Files (text, <100MB): 15,847
+  Total Pull Requests: 1,203
+  Total Commits: 8,956
+----------------------------------
+
+Repository-Level Breakdown:
+  Repo: project-alpha
+    Files: 156
+    PRs: 23
+    Commits: 245
+  Repo: project-beta
+    Files: 89
+    PRs: 12
+    Commits: 167
+  ...
+```
+
+#### Configuration
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `BITBUCKET_CLIENT_ID` | OAuth client ID | Required |
+| `BITBUCKET_CLIENT_SECRET` | OAuth client secret | Required |
+| `BITBUCKET_ACCESS_TOKEN` | OAuth access token | Required |
+| `BITBUCKET_REFRESH_TOKEN` | OAuth refresh token | Required |
+| `BITBUCKET_MAX_PARALLEL` | Max parallel API requests | 20 |
+| `LOCAL_REPO_DIR` | Directory for cloned repos | `./cloned_repos` |
+
+#### Performance & Constraints
+
+- **Repository Limit**: Processes up to 1000 repositories per workspace
+- **File Constraints**: 
+  - Maximum file size: 100MB
+  - Text files only (MIME type + content analysis)
+  - Excludes `.git/` directories and metadata
+- **Workspace Processing**: Processes only the first workspace found
+- **Concurrency**: Configurable parallel processing for optimal performance
+
+#### Authentication
+
+Uses Bitbucket OAuth 2.0 flow:
+1. Create OAuth app in Bitbucket to get client ID and secret
+2. Obtain access and refresh tokens through Bitbucket's OAuth flow
+3. Tokens are automatically refreshed using client credentials when expired
+
+#### Testing
+
+Run the integration test:
+```bash
+python bitbucket/test_bitbucket.py
+``` 
