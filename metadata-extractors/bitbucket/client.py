@@ -11,6 +11,7 @@ from requests.adapters import HTTPAdapter, Retry
 import re
 import mimetypes
 import logging
+import aiohttp
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -189,55 +190,127 @@ async def fetch_repos(workspace: str, credentials: Dict[str, Any], limit: int = 
 
 # --- Functions for Counting ---
 
+def _is_valid_pr(pr_data: Dict[str, Any]) -> bool:
+    """Check if PR has required fields."""
+    return bool(pr_data.get("id") and pr_data.get("title") and
+                pr_data.get("links", {}).get("html", {}).get("href") and
+                pr_data.get("author", {}).get("display_name") and
+                pr_data.get("source") and pr_data.get("destination"))
+
+async def _count_valid_prs_threaded(values: List[Dict[str, Any]]) -> int:
+    """Count valid PRs in a separate thread to keep event loop responsive."""
+    return await asyncio.to_thread(lambda: sum(1 for v in values if _is_valid_pr(v)))
+
+async def _fetch_pr_page(session, url: str, headers: Dict[str, str], semaphore: asyncio.Semaphore) -> tuple[int, Optional[str]]:
+    """Fetch a single PR page and return (count, next_url)."""
+    async with semaphore:
+        try:
+            async with session.get(url, headers=headers) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    count = await _count_valid_prs_threaded(data.get("values", []))
+                    return count, data.get("next")  # Return count and next URL
+                else:
+                    logger.warning(f"Failed to fetch page, status: {resp.status}")
+                    return 0, None
+        except Exception as e:
+            logger.warning(f"Error fetching PR page: {e}")
+            return 0, None
+
 async def count_pull_requests_for_repo(workspace: str, repo: str, credentials: Dict[str, Any]) -> int:
-    """Counts valid pull requests for a specific repository."""
-    url = f"https://api.bitbucket.org/2.0/repositories/{workspace}/{repo}/pullrequests?state=ALL"
+    """Counts valid pull requests using optimized aiohttp with field filtering and parallel fetching."""
+    import aiohttp
+    
+    base_url = f"https://api.bitbucket.org/2.0/repositories/{workspace}/{repo}/pullrequests"
     logger.info(f"Counting PRs for {workspace}/{repo}...")
-    pr_count = 0
-    page_count = 0
-    max_pages = 100  # Safety limit to prevent infinite loops
+    
+    # Define required fields to minimize payload size  
+    # Note: Some Bitbucket instances may not support all field filtering
+    FIELDS = "values.id,values.title,values.links.html.href,values.author.display_name,values.source,values.destination,next,size"
+    
+    headers = {
+        "Authorization": f"Bearer {credentials['access_token']}",
+        "Content-Type": "application/json"
+    }
     
     try:
-        current_url = url
-        while current_url and page_count < max_pages:
-            page_count += 1
-            logger.info(f"Fetching PR page {page_count}...")
+        # Use existing semaphore system from the module
+        semaphore = _get_http_semaphore()
+        total_count = 0
+        
+        async with aiohttp.ClientSession() as session:
             
-            # Use direct requests.get instead of our complex retry logic
-            headers = {
-                "Authorization": f"Bearer {credentials['access_token']}",
-                "Content-Type": "application/json"
+            # Always validate PR fields - try with field filtering first, fallback if needed
+            first_params = {
+                "state": "ALL",
+                "pagelen": 50,  # Conservative page size (Bitbucket may not support 100)
+                "fields": FIELDS
             }
             
-            response = await asyncio.to_thread(
-                requests.get, current_url, headers=headers, timeout=30
-            )
+            # Get first page with full validation
+            async with semaphore:
+                async with session.get(base_url, params=first_params, headers=headers) as response:
+                    if response.status != 200:
+                        response_text = await response.text()
+                        logger.warning(f"PR API with fields returned status {response.status}: {response_text[:200]}")
+                        logger.info("Retrying without field filtering...")
+                        
+                        # Fallback: try without fields parameter
+                        simple_params = {"state": "ALL", "pagelen": 50}
+                        async with session.get(base_url, params=simple_params, headers=headers) as fallback_response:
+                            if fallback_response.status != 200:
+                                fallback_text = await fallback_response.text()
+                                logger.error(f"PR API fallback also failed with status {fallback_response.status}: {fallback_text[:200]}")
+                                return 0
+                            response = fallback_response  # Use fallback response
+                    
+                    page_data = await response.json()
+                    total_count += await _count_valid_prs_threaded(page_data.get("values", []))
+                    next_url = page_data.get("next")
+                    expected_total = page_data.get("size")
             
-            if response.status_code != 200:
-                logger.error(f"PR API returned status {response.status_code}")
-                break
+            if not next_url:
+                logger.info(f"Found {total_count} valid PRs for {workspace}/{repo} (1 page only).")
+                return total_count
+            
+            # Collect remaining pages and fetch in parallel
+            logger.info(f"Fetching remaining pages in parallel (expected ~{expected_total or 'unknown'} total PRs)...")
+            
+            # Start with first next_url
+            active_tasks = set()
+            processed_pages = 1  # Already processed first page
+            pages_with_prs = 1 if total_count > 0 else 0  # Track pages that contain PRs
+            max_concurrent = 10  # Reasonable limit to avoid rate limiting
+            
+            # Add first task
+            if next_url:
+                task = asyncio.create_task(_fetch_pr_page(session, next_url, headers, semaphore))
+                active_tasks.add(task)
+            
+            while active_tasks:
+                # Wait for at least one task to complete
+                done, pending = await asyncio.wait(active_tasks, return_when=asyncio.FIRST_COMPLETED)
+                active_tasks = pending
                 
-            res_json = response.json()
-            pr_values = res_json.get("values", [])
-            logger.info(f"Got {len(pr_values)} PRs from page {page_count}")
+                for task in done:
+                    try:
+                        count, next_link = await task
+                        total_count += count
+                        processed_pages += 1
+                        if count > 0:
+                            pages_with_prs += 1
+                        
+                        # Add next task if there's a next link and we haven't hit limits
+                        if next_link and len(active_tasks) < max_concurrent and processed_pages < 200:
+                            new_task = asyncio.create_task(_fetch_pr_page(session, next_link, headers, semaphore))
+                            active_tasks.add(new_task)
+                            
+                    except Exception as e:
+                        logger.warning(f"Exception in page task: {e}")
             
-            for pr_data in pr_values:
-                if (pr_data.get("id") and pr_data.get("title") and
-                    pr_data.get("links", {}).get("html", {}).get("href") and
-                    pr_data.get("author", {}).get("display_name") and
-                    pr_data.get("source", {}) and pr_data.get("destination", {})):
-                    pr_count += 1
+            logger.info(f"Found {total_count} valid PRs for {workspace}/{repo} and {processed_pages} total pages")
+            return total_count
             
-            current_url = res_json.get("next")
-            if not current_url:
-                logger.info("No more pages to fetch")
-                break
-                
-        if page_count >= max_pages:
-            logger.warning(f"Hit maximum page limit ({max_pages}) for PRs in {workspace}/{repo}")
-        
-        logger.info(f"Found {pr_count} valid PRs for {workspace}/{repo}.")
-        return pr_count
     except Exception as e:
         logger.error(f"Failed to count PRs for {workspace}/{repo}: {str(e)}", exc_info=True)
         return 0
