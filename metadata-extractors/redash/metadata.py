@@ -320,9 +320,10 @@ class RedashMetadataExtractor:
         valid_dashboards = [d for d in dashboard_details if d and not isinstance(d, Exception)]
         logger.info(f"Level 1 complete: {len(valid_dashboards)}/{len(dashboards)} dashboards accessible")
         
-        # LEVEL 2: Flatten and extract ALL query IDs across all dashboards
+        # LEVEL 2: Flatten and extract ALL query IDs across all dashboards (excluding text widgets)
         all_query_ids = []
         widget_to_query_map = {}  # Map widget back to its query_id for counting
+        text_widgets_excluded = 0
         
         for dashboard in valid_dashboards:
             if not dashboard or not isinstance(dashboard, dict) or 'widgets' not in dashboard:
@@ -331,17 +332,29 @@ class RedashMetadataExtractor:
             for widget in dashboard['widgets']:
                 widget_id = widget.get('id')
                 visualization = widget.get("visualization", {})
+                
+                # Skip text widgets - they don't have visualizations or have type "text"
+                widget_type = "text"  # default for widgets without visualization
+                if visualization:
+                    widget_type = visualization.get("type", "text")
+                
+                if widget_type == "text":
+                    text_widgets_excluded += 1
+                    continue  # Skip text widgets
+                
                 query_id = visualization.get("query", {}).get("id") if visualization else None
                 
                 if query_id and widget_id:
                     all_query_ids.append(query_id)
                     widget_to_query_map[widget_id] = query_id
         
+        logger.info(f"Text widgets excluded: {text_widgets_excluded}")
+        
         if not all_query_ids:
-            logger.info("No widgets with queries found")
+            logger.info("No non-text widgets with queries found")
             return 0
             
-        logger.info(f"Level 2: Found {len(all_query_ids)} widgets with queries, fetching query details in parallel...")
+        logger.info(f"Level 2: Found {len(all_query_ids)} non-text widgets with queries, fetching query details in parallel...")
         
         # Fetch ALL query data in parallel (removing duplicates for efficiency)
         unique_query_ids = list(set(all_query_ids))
@@ -369,7 +382,10 @@ class RedashMetadataExtractor:
             if query_id in query_data_map:  # Query exists AND was successfully fetched
                 widgets_with_accessible_queries += 1
         
-        logger.info(f"Widget counting complete: {widgets_with_accessible_queries} widgets have accessible queries (matching original logic)")
+        logger.info(f"Widget counting complete:")
+        logger.info(f"  - Non-text widgets with accessible queries: {widgets_with_accessible_queries}")
+        logger.info(f"  - Text widgets excluded: {text_widgets_excluded}")
+        
         return widgets_with_accessible_queries
 
 
