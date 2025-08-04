@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "helm-chart.fullname" . }}-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "helm-chart.labels" . | nindent 4 }}
+data:
+  GCP_PROJECT_ID: {{ .Values.global.gcp.projectID | quote }}
+  GCP_REGION: {{ .Values.global.gcp.region | quote }}
+  DB_INSTANCE_CONNECTION_NAME: {{ .Values.connections.dbInstanceConnectionName | quote }}
+  DB_PASSWORD_SECRET_NAME: {{ .Values.connections.dbPasswordSecretName | quote }}
+  REDIS_HOST: {{ .Values.connections.redisHost | quote }}
+  GCS_BUCKET_NAME: {{ .Values.connections.gcsBucketName | quote }}
+  PUBSUB_TOPIC_NAME: {{ .Values.connections.pubsubTopicName | quote }}
+  ELASTIC_HOST: {{ .Values.connections.elasticHost | quote }}
+  DB_INSTANCE_ID: {{ .Values.connections.dbInstanceId | quote }}
+  REDIS_INSTANCE_ID: {{ .Values.connections.redisInstanceId | quote }} 

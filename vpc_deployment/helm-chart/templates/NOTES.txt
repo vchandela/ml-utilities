@@ -1,0 +1,41 @@
+Your Pavo VPC application stack has been deployed.
+
+Release Name: {{ .Release.Name }}
+Namespace:    {{ .Release.Namespace }}
+
+NOTES:
+1.  Verify Pod Status:
+    Check that all pods are in the 'Running' state with the command:
+    kubectl get pods -n {{ .Release.Namespace }} -l app.kubernetes.io/instance={{ .Release.Name }}
+
+2.  Check Application Logs:
+    To see the logs for the main application, run:
+    kubectl logs -n {{ .Release.Namespace }} -l app.kubernetes.io/component=main-app -c pavo-vpc-app --tail=100 -f
+
+3.  Access the Application (Internal):
+    The main application is running on an internal ClusterIP service. To access it from your local machine, run the following port-forward command in a separate terminal:
+
+    kubectl port-forward -n {{ .Release.Namespace }} svc/{{ include "helm-chart.fullname" . }}-main-app 8080:80
+
+    You can now send requests to http://localhost:8080
+
+4.  Test with a sample request:
+    curl -X POST http://localhost:8080/task \
+    -H "Content-Type: application/json" \
+    -d '{"content": "This is a test task from Pavo VPC Helm deployment."}'
+
+5.  Prometheus Monitoring:
+    {{- if .Values.serviceMonitor.enabled }}
+    ServiceMonitors have been created. Check your Prometheus UI's "Targets" page. You should see new targets appearing for '{{ include "helm-chart.fullname" . }}-main-app' and '{{ include "helm-chart.fullname" . }}-metrics-exporter'.
+    {{- else }}
+    ServiceMonitors are disabled. To enable them, set 'serviceMonitor.enabled' to 'true' in your values file and run 'helm upgrade'.
+    {{- end }}
+
+6.  Access Metrics:
+    To view application metrics directly:
+    kubectl port-forward -n {{ .Release.Namespace }} svc/{{ include "helm-chart.fullname" . }}-main-app 8081:80
+    curl http://localhost:8081/metrics
+
+    To view GCP infrastructure metrics:
+    kubectl port-forward -n {{ .Release.Namespace }} svc/{{ include "helm-chart.fullname" . }}-metrics-exporter 8082:80
+    curl http://localhost:8082/metrics 

@@ -1,0 +1,8 @@
+# Python dependencies for the GCP Infrastructure Metrics Exporter
+# These packages are needed for collecting GCP metrics and exposing them to Prometheus
+
+fastapi
+uvicorn
+prometheus_client
+google-cloud-monitoring
+pydantic-settings 

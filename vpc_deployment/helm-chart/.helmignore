@@ -1,0 +1,13 @@
+# Files and directories to ignore when packaging the Helm chart
+# This prevents unnecessary files from being included in the chart package
+# Similar to .gitignore but specifically for Helm chart packaging
+
+.DS_Store
+.git/
+.gitignore
+*.swp
+*.bak
+*.tmp
+*.orig
+*~
+.vscode/ 

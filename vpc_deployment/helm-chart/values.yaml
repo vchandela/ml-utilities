@@ -1,0 +1,71 @@
+# Default configuration values for the Helm chart
+# These values can be overridden when installing or upgrading the chart
+# All configurable parameters for the Pavo VPC deployment are centralized here
+
+# -- Global Settings --
+# These values are often consistent across all components of the chart.
+global:
+  gcp:
+    # IMPORTANT: These MUST be overridden by the customer's terraform outputs.
+    projectID: "your-gcp-project-id"
+    region: "us-central1"
+    # The full email of the GCP Service Account that Kubernetes will use.
+    serviceAccountEmail: "sa-name@your-gcp-project-id.iam.gserviceaccount.com"
+
+# -- Kubernetes Service Account Configuration --
+serviceAccount:
+  # Specifies whether a ServiceAccount should be created
+  create: true
+  # The name of the ServiceAccount to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: "pavo-vpc-app-sa"
+
+# -- Main Application (pavo-vpc-app) Configuration --
+mainApp:
+  replicaCount: 2
+  image:
+    repository: "us-central1-docker.pkg.dev/your-gcp-project-id/pavo-vpc-services/pavo-vpc-main-app"
+    pullPolicy: IfNotPresent
+    # The image tag should correspond to the appVersion in Chart.yaml
+    tag: "1.0.0"
+
+# -- Metrics Exporter Application Configuration --
+metricsExporter:
+  replicaCount: 1
+  image:
+    repository: "us-central1-docker.pkg.dev/your-gcp-project-id/pavo-vpc-services/pavo-vpc-metrics-exporter"
+    pullPolicy: IfNotPresent
+    tag: "1.0.0"
+
+# -- Cloud SQL Proxy Sidecar Configuration --
+cloudSqlProxy:
+  image:
+    repository: "gcr.io/cloud-sql-connectors/cloud-sql-proxy"
+    tag: "2.8.0"
+
+# -- Infrastructure Connection Details & Secrets --
+# These values are sensitive or environment-specific and will be populated
+# from Terraform outputs into a customer-specific values file.
+connections:
+  dbInstanceConnectionName: ""
+  dbPasswordSecretName: "pavo-vpc-db-password" # K8s secret name in Secret Manager
+  redisHost: ""
+  gcsBucketName: ""
+  pubsubTopicName: ""
+  elasticHost: ""
+  # IMPORTANT: The password will be passed via --set or a secret values file
+  elasticPassword: ""
+
+  # For the metrics exporter
+  dbInstanceId: ""
+  redisInstanceId: ""
+
+# -- Prometheus ServiceMonitor configuration --
+serviceMonitor:
+  enabled: true
+  # This label must match the 'release' label on your Prometheus Operator installation
+  prometheusReleaseLabel: "prometheus"
+  # How often Prometheus should scrape the main app
+  mainAppScrapeInterval: "30s"
+  # How often Prometheus should scrape the metrics exporter (less frequent is better)
+  metricsExporterScrapeInterval: "60s" 

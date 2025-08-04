@@ -1,0 +1,19 @@
+# Helm Chart metadata file
+# Defines the chart name, version, description and other metadata
+# This chart deploys the Pavo VPC application and supporting services to Kubernetes
+
+apiVersion: v2
+name: helm-chart
+description: A Helm chart for deploying the Pavo VPC managed service stack
+
+# A chart can be either an 'application' or a 'library' chart.
+# Application charts are installable, and library charts provide templates.
+type: application
+
+# This is the chart version. This version number should be incremented each time you make changes
+# to the chart and its templates.
+version: 0.1.0
+
+# This is the version number of the application being deployed. This version number should be
+# incremented each time you make changes to the application.
+appVersion: "1.0.0" 

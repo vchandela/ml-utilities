@@ -1,0 +1,46 @@
+# --- Service for the Main Application ---
+# This Service provides a stable endpoint for the main pavo-vpc-app pods.
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "helm-chart.fullname" . }}-main-app
+  namespace: {{ .Release.Namespace }}
+  labels:
+    # These are the standard Helm labels for organization and identification.
+    {{- include "helm-chart.labels" . | nindent 4 }}
+    # We add a component label to specify which part of the chart this is.
+    app.kubernetes.io/component: main-app
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    # This selector MUST match the labels on the pods in the deployment.yaml.
+    # It tells the Service: "Send traffic to any pod with these labels."
+    {{- include "helm-chart.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: main-app
+---
+# --- Service for the Metrics Exporter ---
+# This Service provides a stable endpoint for the metrics-exporter pods.
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "helm-chart.fullname" . }}-metrics-exporter
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "helm-chart.labels" . | nindent 4 }}
+    app.kubernetes.io/component: metrics-exporter
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    # This selector targets only the metrics-exporter pods.
+    {{- include "helm-chart.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: metrics-exporter 

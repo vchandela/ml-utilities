@@ -1,0 +1,57 @@
+{{- if .Values.serviceMonitor.enabled }}
+# --- ServiceMonitor for the Main Application ---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "helm-chart.fullname" . }}-main-app
+  namespace: {{ .Release.Namespace }}
+  labels:
+    # This label is essential for the Prometheus Operator to discover this ServiceMonitor.
+    # It must match the `serviceMonitorSelector` of your Prometheus installation.
+    release: {{ .Values.serviceMonitor.prometheusReleaseLabel }}
+    # Standard Helm labels for identification.
+    {{- include "helm-chart.labels" . | nindent 4 }}
+spec:
+  # This section tells the ServiceMonitor which Services to target.
+  selector:
+    matchLabels:
+      # It will look for any Service that has these labels.
+      # This matches the 'pavo-vpc-main-app-service' we defined above.
+      {{- include "helm-chart.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: main-app
+  # This tells Prometheus to look for the target Service in the same namespace
+  # where our Helm chart is released.
+  namespaceSelector:
+    matchNames:
+      - {{ .Release.Namespace }}
+  endpoints:
+    # Defines how to scrape the metrics from the targeted Service.
+    - port: http
+      path: /metrics
+      interval: {{ .Values.serviceMonitor.mainAppScrapeInterval }}
+---
+# --- ServiceMonitor for the Metrics Exporter ---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "helm-chart.fullname" . }}-metrics-exporter
+  namespace: {{ .Release.Namespace }}
+  labels:
+    release: {{ .Values.serviceMonitor.prometheusReleaseLabel }}
+    {{- include "helm-chart.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      # This selector targets the 'pavo-vpc-metrics-exporter-service'.
+      {{- include "helm-chart.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: metrics-exporter
+  namespaceSelector:
+    matchNames:
+      - {{ .Release.Namespace }}
+  endpoints:
+    - port: http
+      path: /metrics
+      # We scrape the exporter less frequently as it makes API calls to GCP,
+      # which can incur minor costs and have rate limits.
+      interval: {{ .Values.serviceMonitor.metricsExporterScrapeInterval }}
+{{- end }} 

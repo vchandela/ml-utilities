@@ -1,96 +1,516 @@
-# Grafana Integration Demo (FastAPI + Prometheus)
+# Pavo VPC Deployment
 
-This project demonstrates a simple FastAPI application that exposes metrics
-to Prometheus and can be visualized in Grafana.
+A production-ready, enterprise-grade microservices stack built on Google Cloud Platform (GCP) with complete infrastructure automation, comprehensive monitoring, and Kubernetes deployment capabilities.
 
-## Features
+## 🏗️ Project Overview
 
-*   **FastAPI Backend:** A web framework for building APIs.
-*   **Prometheus Metrics:** Tracks the number of requests to the `/task` endpoint
-    using the `prometheus_client` library.
-*   **`/task` Endpoint:** The primary endpoint for performing some simulated work.
-*   **`/health` Endpoint:** A basic health check.
-*   **`/metrics` Endpoint:** Exposes Prometheus metrics in the required format.
+The Pavo VPC deployment is a comprehensive cloud-native application that demonstrates best practices for:
+- **Infrastructure as Code** with Terraform
+- **Microservices Architecture** with FastAPI
+- **Container Orchestration** with Kubernetes (GKE Autopilot)
+- **Observability** with Prometheus metrics and monitoring
+- **Security** with private networking and secret management
+- **CI/CD** with Helm-based deployments
 
-## Local Development and Testing
+## 📋 Table of Contents
 
-1.  **Install Dependencies:**
-    ```bash
-    pip install -r app/requirements.txt
-    ```
+- [Architecture](#-architecture)
+- [Features](#-features)
+- [Project Structure](#-project-structure)
+- [Prerequisites](#-prerequisites)
+- [Quick Start](#-quick-start)
+- [Phase-by-Phase Implementation](#-phase-by-phase-implementation)
+- [Deployment Guide](#-deployment-guide)
+- [Testing & Validation](#-testing--validation)
+- [Monitoring & Observability](#-monitoring--observability)
+- [Security](#-security)
+- [Contributing](#-contributing)
 
-2.  **Run the application:**
-    ```bash
-    cd app
-    uvicorn main:app --reload --port 8000
-    ```
+## 🏛️ Architecture
 
-3.  **Test the endpoints:**
-    *   Open `http://127.0.0.1:8000/` in your browser.
-    *   Open `http://127.0.0.1:8000/task` in your browser (multiple times).
-    *   Open `http://127.0.0.1:8000/health` in your browser.
-    *   Open `http://127.0.0.1:8000/metrics` in your browser to see the Prometheus metrics. You should see a line like:
-        ```
-        # HELP task_requests_total Total number of /task endpoint requests received
-        # TYPE task_requests_total counter
-        task_requests_total 5.0
-        ```
-        (The `5.0` will update as you hit `/task`).
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Kubernetes    │    │   Applications  │    │   GCP Services  │
+│                 │    │                 │    │                 │
+│  ┌──────────┐   │    │  ┌──────────┐   │    │  ┌──────────┐   │
+│  │ Main App │◄──┼────┼──┤FastAPI   │◄──┼────┤  │PostgreSQL│   │
+│  │ Service  │   │    │  │Multi-Svc │   │    │  │Cloud SQL │   │
+│  └──────────┘   │    │  └──────────┘   │    │  └──────────┘   │
+│                 │    │                 │    │                 │
+│  ┌──────────┐   │    │  ┌──────────┐   │    │  ┌──────────┐   │
+│  │ Metrics  │◄──┼────┼──┤GCP       │◄──┼────┤  │Redis     │   │
+│  │ Exporter │   │    │  │Monitor   │   │    │  │Cache     │   │
+│  └──────────┘   │    │  └──────────┘   │    │  └──────────┘   │
+│                 │    │                 │    │                 │
+│  ┌──────────┐   │    │                 │    │  ┌──────────┐   │
+│  │Prometheus│   │    │                 │    │  │Elasticsearch│ │
+│  │          │   │    │                 │    │  │& Kibana  │   │
+│  └──────────┘   │    │                 │    │  └──────────┘   │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+```
 
-## Building the Docker Image
+## ✨ Features
 
-1.  **Build the image:**
-    ```bash
-    docker build -t vpc-deployment:latest .
-    ```
+### 🚀 Application Capabilities
+- **Multi-Service Integration**: Single API call writes to 5 different services
+- **Async Processing**: FastAPI with proper lifespan management
+- **Configuration Management**: Environment-based settings with pydantic
+- **Health Checks**: Kubernetes-ready liveness and readiness probes
+- **Error Handling**: Comprehensive exception management and logging
 
-2.  **Run the Docker container locally (optional):**
-    ```bash
-    docker run -p 8080:80 vpc-deployment:latest
-    ```
-    You can then access the endpoints at `http://127.0.0.1:8080/`.
+### 📊 Monitoring & Observability
+- **Application Metrics**: 6 Prometheus metrics tracking service interactions
+- **Infrastructure Metrics**: Real-time GCP resource monitoring
+- **Distributed Tracing**: Per-request tracking with unique task IDs
+- **Health Monitoring**: Service health checks and status reporting
 
-## GKE Deployment
+### 🔒 Security & Networking
+- **Private VPC**: All services communicate via private IPs
+- **Secret Management**: Automated password generation and secure storage
+- **IAM Integration**: Kubernetes ServiceAccount with GCP binding
+- **Network Isolation**: No public internet access to databases
 
-Now, deploy your application on GKE using cloud build or relevant CI/CD. We'll use a temp namespace `vpc-deployment`
-- I'm using manual docker image build → push → deploy for now
+### 🏗️ Infrastructure Automation
+- **Infrastructure as Code**: Complete Terraform configuration
+- **Container Orchestration**: GKE Autopilot for cost-effective scaling
+- **Helm Deployment**: Production-ready Kubernetes manifests
+- **CI/CD Ready**: Versioned deployments with rollback capabilities
 
-1. **Build the Docker image:**
-   ```bash
-   docker build -t vpc-deployment:latest .
-   ```
+## 📁 Project Structure
 
-2. **Create Artifact Registry repository (if not created already):**
-   ```bash
-   gcloud artifacts repositories create vpc-deployment \
-     --repository-format=docker \
-     --location=us-central1 \
-     --description="Docker repo for vpc-deployment"
-   ```
+```
+pavo-vpc-deployment/
+├── .gitignore                           # Security: prevents credential leaks
+├── Dockerfile                          # Main application container
+├── README.md                           # This file
+├── app/                                # 🚀 Main FastAPI Application
+│   ├── __init__.py
+│   ├── config.py                      # Environment configuration
+│   ├── main.py                        # Multi-service FastAPI app
+│   └── requirements.txt               # Python dependencies
+├── helm-chart/                        # 🎛️ Kubernetes Deployment
+│   ├── Chart.yaml                     # Helm chart metadata
+│   ├── values.yaml                    # Configuration values
+│   ├── .helmignore                    # Chart packaging rules
+│   └── templates/                     # Kubernetes manifests
+│       ├── _helpers.tpl               # Template helpers
+│       ├── configmap.yaml             # Environment variables
+│       ├── deployment.yaml            # Application deployments
+│       ├── NOTES.txt                  # Post-install instructions
+│       ├── secret.yaml                # Elasticsearch credentials
+│       ├── service.yaml               # Network services
+│       ├── serviceaccount.yaml        # GCP IAM integration
+│       └── servicemonitor.yaml        # Prometheus monitoring
+├── metrics_exporter/                  # 📊 Infrastructure Monitoring
+│   ├── Dockerfile                     # Metrics service container
+│   ├── main.py                        # GCP monitoring integration
+│   └── requirements.txt               # Monitoring dependencies
+└── terraform/                         # ☁️ Infrastructure as Code
+    ├── versions.tf                    # Provider requirements
+    ├── main.tf                        # Provider configuration
+    ├── variables.tf                   # Input variables
+    ├── networking.tf                  # VPC and networking
+    ├── gke.tf                         # Kubernetes cluster
+    ├── cloudsql.tf                    # PostgreSQL database
+    ├── redis.tf                       # Redis cache
+    ├── elasticsearch.tf               # Search service
+    ├── pubsub_gcs.tf                  # Messaging and storage
+    └── outputs.tf                     # Infrastructure outputs
+```
 
-3. **Authenticate with Google Cloud and configure Docker:**
-   ```bash
-   gcloud auth login                       # if not already logged in
-   gcloud auth configure-docker us-central1-docker.pkg.dev
-   ```
+## 🛠️ Prerequisites
 
-4. **Tag your image with full registry path:**
-   ```bash
-   docker tag vpc-deployment:latest \
-     us-central1-docker.pkg.dev/onboarding-455713/vpc-deployment/vpc-deployment:latest
-   ```
+### Required Tools
+- **Terraform** >= 1.0
+- **Helm** >= 3.0
+- **kubectl** (configured for GKE)
+- **Docker** (for building images)
+- **gcloud CLI** (authenticated)
 
-5. **Push the image to Artifact Registry:**
-   ```bash
-   docker push us-central1-docker.pkg.dev/onboarding-455713/vpc-deployment/vpc-deployment:latest
-   ```
+### Required Credentials
+- **GCP Service Account JSON** (`gcp-credentials.json`)
+- **Elastic Cloud API Key** (`elastic-api-key.txt`)
 
-6. **Deploy to GKE:**
-   ```bash
-   kubectl apply -f infra/values.yaml
-   ```
+### GCP APIs to Enable
+```bash
+gcloud services enable container.googleapis.com
+gcloud services enable sqladmin.googleapis.com
+gcloud services enable redis.googleapis.com
+gcloud services enable secretmanager.googleapis.com
+gcloud services enable storage.googleapis.com
+gcloud services enable pubsub.googleapis.com
+```
 
-## Next Steps
+## 🚀 Quick Start
 
-1. **Configure Prometheus** in your Kubernetes cluster to scrape metrics from your service.
-2. **Configure Grafana** to connect to Prometheus and create a dashboard to visualize `task_requests_total`. 
+### 1. Clone and Setup
+```bash
+git clone <repository-url>
+cd pavo-vpc-deployment
+
+# Place your credentials in the root directory
+cp /path/to/your/gcp-credentials.json .
+cp /path/to/your/elastic-api-key.txt .
+```
+
+### 2. Deploy Infrastructure
+```bash
+cd terraform/
+
+# Initialize Terraform
+terraform init
+
+# Set Elastic API key
+export EC_API_KEY=$(cat ../elastic-api-key.txt)
+
+# Deploy infrastructure
+terraform plan
+terraform apply
+```
+
+### 3. Build and Push Images
+```bash
+# Build main application
+docker build -t gcr.io/YOUR_PROJECT/pavo-vpc-main-app:1.0.0 .
+docker push gcr.io/YOUR_PROJECT/pavo-vpc-main-app:1.0.0
+
+# Build metrics exporter
+docker build -t gcr.io/YOUR_PROJECT/pavo-vpc-metrics-exporter:1.0.0 ./metrics_exporter/
+docker push gcr.io/YOUR_PROJECT/pavo-vpc-metrics-exporter:1.0.0
+```
+
+### 4. Deploy Applications
+```bash
+# Create values file from Terraform outputs
+cat > my-values.yaml << EOF
+global:
+  gcp:
+    projectID: "YOUR_PROJECT_ID"
+    region: "us-central1"
+    serviceAccountEmail: "your-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com"
+
+connections:
+  dbInstanceConnectionName: "$(terraform output -raw cloud_sql_connection_name)"
+  dbPasswordSecretName: "$(terraform output -raw db_password_secret_name)"
+  redisHost: "$(terraform output -raw redis_host_ip)"
+  gcsBucketName: "$(terraform output -raw gcs_bucket_name)"
+  pubsubTopicName: "$(terraform output -raw pubsub_topic_name)"
+  elasticHost: "$(terraform output -raw elasticsearch_endpoint)"
+  elasticPassword: "$(terraform output -raw elasticsearch_password)"
+  dbInstanceId: "pavo-vpc-postgres-instance"
+  redisInstanceId: "pavo-vpc-redis-cache"
+EOF
+
+# Deploy with Helm
+helm upgrade --install pavo-vpc ./helm-chart \
+  --namespace pavo-vpc-services --create-namespace \
+  -f my-values.yaml \
+  --set mainApp.image.tag="1.0.0" \
+  --set metricsExporter.image.tag="1.0.0"
+```
+
+## 📋 Phase-by-Phase Implementation
+
+### Phase 1: Repository Restructuring ✅
+**Objective**: Clean, organized project structure
+
+**Deliverables**:
+- ✅ Proper directory structure with clear separation of concerns
+- ✅ Security-focused `.gitignore` preventing credential leaks
+- ✅ Pavo-VPC naming convention throughout project
+- ✅ Placeholder files and basic structure
+
+### Phase 2: Infrastructure as Code ✅
+**Objective**: Automated GCP infrastructure provisioning
+
+**Deliverables**:
+- ✅ **10 Terraform files** creating complete infrastructure
+- ✅ **VPC with private networking** (`pavo-vpc`)
+- ✅ **GKE Autopilot cluster** (`pavo-vpc-autopilot-cluster`)
+- ✅ **Cloud SQL PostgreSQL** with auto-generated secrets
+- ✅ **Redis cache** + **Elasticsearch** + **GCS** + **Pub/Sub**
+- ✅ **Secret Manager** integration for credential security
+
+### Phase 3: FastAPI Application Enhancement ✅
+**Objective**: Production-ready microservice with full GCP integration
+
+**Deliverables**:
+- ✅ **Multi-service writes**: PostgreSQL, Redis, Elasticsearch, GCS, Pub/Sub
+- ✅ **pydantic-settings** configuration management
+- ✅ **Async lifespan management** with proper startup/shutdown
+- ✅ **SQLAlchemy ORM** with database models
+- ✅ **6 Prometheus metrics** for comprehensive monitoring
+- ✅ **Health checks** for Kubernetes readiness/liveness
+
+### Phase 4: Cross-Project Metrics Exporter ✅
+**Objective**: Separate service for GCP infrastructure monitoring
+
+**Deliverables**:
+- ✅ **Independent FastAPI service** for metrics collection
+- ✅ **Real GCP Cloud Monitoring API** integration
+- ✅ **Prometheus-compatible metrics** for infrastructure
+- ✅ **Monitoring**: Cloud SQL CPU, Redis memory usage
+- ✅ **Production deployment** with proper error handling
+
+### Phase 5: Helm-based Deployment ✅
+**Objective**: Production-ready Kubernetes deployment system
+
+**Deliverables**:
+- ✅ **Complete Helm chart** with 9 template files
+- ✅ **Both applications** deployed with proper networking
+- ✅ **Cloud SQL Proxy sidecar** for secure database access
+- ✅ **Prometheus ServiceMonitors** for automatic discovery
+- ✅ **GCP IAM integration** via Kubernetes service accounts
+- ✅ **Comprehensive configuration** management
+- ✅ **Post-deployment instructions** and testing commands
+
+## 🚀 Deployment Guide
+
+### Infrastructure Deployment
+
+1. **Initialize Terraform**:
+```bash
+cd terraform/
+terraform init
+```
+
+2. **Configure Variables** (optional):
+```bash
+# Edit terraform/variables.tf or create terraform.tfvars
+echo 'gcp_project_id = "your-project-id"' > terraform.tfvars
+echo 'gcp_region = "us-central1"' >> terraform.tfvars
+```
+
+3. **Deploy Infrastructure**:
+```bash
+export EC_API_KEY=$(cat ../elastic-api-key.txt)
+terraform plan
+terraform apply
+```
+
+### Application Deployment
+
+1. **Prepare Configuration**:
+```bash
+# Extract Terraform outputs for Helm values
+terraform output -json > terraform-outputs.json
+```
+
+2. **Install with Helm**:
+```bash
+helm upgrade --install pavo-vpc ./helm-chart \
+  --namespace pavo-vpc-services \
+  --create-namespace \
+  --set global.gcp.projectID="your-project-id" \
+  --set connections.elasticPassword="your-elastic-password"
+```
+
+### Rollback Strategy
+
+```bash
+# View deployment history
+helm history pavo-vpc -n pavo-vpc-services
+
+# Rollback to previous version
+helm rollback pavo-vpc 1 -n pavo-vpc-services
+```
+
+## 🧪 Testing & Validation
+
+### Application Testing
+
+1. **Port Forward to Application**:
+```bash
+kubectl port-forward -n pavo-vpc-services svc/pavo-vpc-main-app 8080:80
+```
+
+2. **Test Task Creation**:
+```bash
+curl -X POST http://localhost:8080/task \
+  -H "Content-Type: application/json" \
+  -d '{"content": "Test task from Pavo VPC deployment"}'
+```
+
+3. **Verify Multi-Service Writes**:
+```bash
+# Check application logs
+kubectl logs -n pavo-vpc-services -l app.kubernetes.io/component=main-app -c pavo-vpc-app --tail=50
+
+# Expected log entries:
+# - Successfully wrote to PostgreSQL
+# - Successfully wrote to Redis  
+# - Successfully indexed in Elasticsearch
+# - Successfully uploaded to GCS
+# - Successfully published to Pub/Sub
+```
+
+### Infrastructure Validation
+
+1. **Check Pod Status**:
+```bash
+kubectl get pods -n pavo-vpc-services
+```
+
+2. **Verify Metrics Collection**:
+```bash
+# Port forward to metrics exporter
+kubectl port-forward -n pavo-vpc-services svc/pavo-vpc-metrics-exporter 8082:80
+
+# Check GCP infrastructure metrics
+curl http://localhost:8082/metrics
+```
+
+3. **Database Connectivity**:
+```bash
+# Exec into main app pod
+kubectl exec -it -n pavo-vpc-services deployment/pavo-vpc-main-app -c pavo-vpc-app -- /bin/bash
+
+# Test database connection (inside pod)
+python -c "
+from app.config import settings
+print(f'DB Host: {settings.DB_HOST}')
+print(f'Redis Host: {settings.REDIS_HOST}')
+"
+```
+
+## 📊 Monitoring & Observability
+
+### Application Metrics
+
+The main application exposes the following Prometheus metrics:
+
+- `task_requests_total` - Total API requests received
+- `postgres_writes_success_total` - Successful PostgreSQL writes
+- `redis_writes_success_total` - Successful Redis writes  
+- `gcs_uploads_success_total` - Successful GCS uploads
+- `pubsub_messages_success_total` - Successful Pub/Sub messages
+- `elastic_index_success_total` - Successful Elasticsearch indexing
+
+### Infrastructure Metrics
+
+The metrics exporter provides:
+
+- `gcp_cloudsql_cpu_utilization` - Cloud SQL CPU usage
+- `gcp_redis_memory_usage_ratio` - Redis memory consumption
+
+### Accessing Metrics
+
+```bash
+# Application metrics
+kubectl port-forward -n pavo-vpc-services svc/pavo-vpc-main-app 8081:80
+curl http://localhost:8081/metrics
+
+# Infrastructure metrics  
+kubectl port-forward -n pavo-vpc-services svc/pavo-vpc-metrics-exporter 8082:80
+curl http://localhost:8082/metrics
+```
+
+### Prometheus Integration
+
+If you have Prometheus Operator installed, the ServiceMonitors will automatically configure scraping:
+
+```bash
+# Check ServiceMonitor status
+kubectl get servicemonitor -n pavo-vpc-services
+
+# Verify Prometheus targets
+# Visit Prometheus UI → Status → Targets
+# Look for pavo-vpc-main-app and pavo-vpc-metrics-exporter
+```
+
+## 🔐 Security
+
+### Network Security
+- **Private VPC**: All resources communicate via private IPs
+- **No Public Database Access**: Cloud SQL accessible only within VPC
+- **Secure Service Communication**: Kubernetes internal networking
+
+### Credential Management
+- **Secret Manager**: Database passwords auto-generated and stored securely
+- **Kubernetes Secrets**: Elasticsearch credentials managed by K8s
+- **IAM Integration**: Service accounts with minimal required permissions
+
+### Container Security
+- **Non-root Containers**: All containers run as unprivileged users
+- **Security Contexts**: Proper security context configuration
+- **Image Scanning**: Recommended for production deployments
+
+## 🛠️ Development
+
+### Local Development
+
+1. **Setup Python Environment**:
+```bash
+cd app/
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+2. **Run Application Locally**:
+```bash
+# Set required environment variables
+export GCP_PROJECT_ID=your-project-id
+export DB_HOST=127.0.0.1
+export REDIS_HOST=your-redis-host
+# ... other environment variables
+
+uvicorn app.main:app --reload --port 8000
+```
+
+### Building Images
+
+```bash
+# Main application
+docker build -t pavo-vpc-main-app:latest .
+
+# Metrics exporter
+docker build -t pavo-vpc-metrics-exporter:latest ./metrics_exporter/
+```
+
+### Helm Chart Development
+
+```bash
+# Lint Helm chart
+helm lint ./helm-chart/
+
+# Debug template rendering
+helm template pavo-vpc ./helm-chart/ --values ./helm-chart/values.yaml
+
+# Dry run deployment
+helm upgrade --install pavo-vpc ./helm-chart/ --dry-run --debug
+```
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+### Development Guidelines
+
+- Follow Python PEP 8 style guidelines
+- Add comprehensive logging for new features
+- Include proper error handling
+- Update tests for new functionality
+- Document configuration changes in values.yaml
+
+## 📜 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- Google Cloud Platform for infrastructure services
+- Elastic for search capabilities  
+- Prometheus community for monitoring standards
+- Helm community for Kubernetes package management
+- FastAPI team for the excellent Python framework
+
+---
+
+**🎯 Pavo VPC Deployment - Production-Ready Cloud-Native Microservices Stack**
+
+*Built with ❤️ for enterprise-grade deployments* 

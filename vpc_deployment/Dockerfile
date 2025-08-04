@@ -1,3 +1,7 @@
+# Dockerfile for the main FastAPI application
+# Builds a production-ready container image for the VPC deployment web application
+# Includes security best practices and proper Python environment setup
+
 # Use an official Python runtime as a parent image
 FROM python:3.9-slim
 

@@ -1,3 +1,27 @@
+# Python dependencies for the main FastAPI application
+# Core packages needed for the web application, metrics, and ASGI server
+
+# Web Framework
 fastapi==0.104.1
 uvicorn[standard]==0.23.2
-prometheus_client==0.19.0 
+
+# Monitoring
+prometheus_client==0.19.0
+
+# Google Cloud Clients
+google-cloud-storage
+google-cloud-pubsub
+google-cloud-secret-manager # To fetch the DB password
+
+# Database
+sqlalchemy # ORM for interacting with Postgres
+psycopg2-binary # Postgres driver
+
+# Redis Cache
+redis
+
+# Elasticsearch
+elasticsearch
+
+# Configuration Management
+pydantic-settings 

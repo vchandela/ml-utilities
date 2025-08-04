@@ -1,0 +1,26 @@
+# Git ignore file for VPC Deployment project
+# Prevents sensitive files, build artifacts, and temporary files from being committed to version control
+# CRITICAL: Ensures credentials and secrets are never accidentally committed
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+crash.log
+
+# Sensitive Files - CRITICAL
+gcp-credentials.json
+elastic-api-key.txt 
+
+repomix-output.txt
+task.md

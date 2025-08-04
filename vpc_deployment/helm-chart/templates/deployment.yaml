@@ -1,0 +1,109 @@
+# --- Main Application Deployment ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "helm-chart.fullname" . }}-main-app
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "helm-chart.labels" . | nindent 4 }}
+    app.kubernetes.io/component: main-app
+spec:
+  replicas: {{ .Values.mainApp.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "helm-chart.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: main-app
+  template:
+    metadata:
+      labels:
+        {{- include "helm-chart.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: main-app
+    spec:
+      serviceAccountName: {{ include "helm-chart.serviceAccountName" . }}
+      containers:
+        - name: pavo-vpc-app
+          image: "{{ .Values.mainApp.image.repository }}:{{ .Values.mainApp.image.tag }}"
+          imagePullPolicy: {{ .Values.mainApp.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: {{ include "helm-chart.fullname" . }}-config
+          env:
+            - name: DB_HOST
+              value: "127.0.0.1"
+            - name: ELASTIC_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "helm-chart.fullname" . }}-elastic-credentials
+                  key: password
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+        - name: cloud-sql-proxy
+          image: "{{ .Values.cloudSqlProxy.image.repository }}:{{ .Values.cloudSqlProxy.image.tag }}"
+          args:
+            - "--private-ip"
+            - "$(DB_INSTANCE_CONNECTION_NAME)"
+          securityContext:
+            runAsNonRoot: true
+          envFrom:
+            - configMapRef:
+                name: {{ include "helm-chart.fullname" . }}-config
+---
+# --- Metrics Exporter Deployment ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "helm-chart.fullname" . }}-metrics-exporter
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "helm-chart.labels" . | nindent 4 }}
+    app.kubernetes.io/component: metrics-exporter
+spec:
+  replicas: {{ .Values.metricsExporter.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "helm-chart.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: metrics-exporter
+  template:
+    metadata:
+      labels:
+        {{- include "helm-chart.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: metrics-exporter
+    spec:
+      serviceAccountName: {{ include "helm-chart.serviceAccountName" . }}
+      containers:
+        - name: metrics-exporter
+          image: "{{ .Values.metricsExporter.image.repository }}:{{ .Values.metricsExporter.image.tag }}"
+          imagePullPolicy: {{ .Values.metricsExporter.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: {{ include "helm-chart.fullname" . }}-config
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /metrics
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5 
