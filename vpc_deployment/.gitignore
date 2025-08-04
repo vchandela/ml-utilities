@@ -22,5 +22,5 @@ crash.log
 gcp-credentials.json
 elastic-api-key.txt 
 
-repomix-output.txt
+repomix-output.*
 task.md

@@ -1,0 +1,51 @@
+# Customer-specific values for Pavo VPC deployment
+# Generated from Terraform outputs and configured for vendor images
+
+# -- Global Settings --
+global:
+  gcp:
+    projectID: "ml-tool-playground"
+    region: "us-central1"
+    # Note: Service account email should be configured separately if needed
+    serviceAccountEmail: "vendor-deployment-sa@ml-tool-playground.iam.gserviceaccount.com"
+
+# -- Main Application Configuration --
+mainApp:
+  replicaCount: 2
+  image:
+    repository: "us-central1-docker.pkg.dev/ml-tool-playground/pavo-vpc/pavo-vpc-main-app"
+    pullPolicy: IfNotPresent
+    tag: "1.0.1"
+
+# -- Metrics Exporter Configuration --
+metricsExporter:
+  replicaCount: 1
+  image:
+    repository: "us-central1-docker.pkg.dev/ml-tool-playground/pavo-vpc/pavo-vpc-metrics-exporter"
+    pullPolicy: IfNotPresent
+    tag: "1.0.0"
+
+# -- Infrastructure Connection Details --
+# Populated from Terraform outputs
+connections:
+  dbInstanceConnectionName: "ml-tool-playground:us-central1:pavo-vpc-postgres-instance"
+  dbPasswordSecretName: "pavo-vpc-db-password"
+  redisHost: "10.129.0.3"
+  gcsBucketName: "ml-tool-playground-pavo-vpc-storage-bucket"
+  pubsubTopicName: "pavo-vpc-tasks-topic"
+  
+  # Elasticsearch - temporarily empty (as planned)
+  elasticHost: ""
+  elasticPassword: ""
+  
+  # For metrics exporter
+  dbInstanceId: "pavo-vpc-postgres-instance"
+  redisInstanceId: "pavo-vpc-redis-cache"
+
+# -- ServiceMonitor Configuration --
+# Disabled for initial deployment (Prometheus Operator not installed)
+serviceMonitor:
+  enabled: false
+  prometheusReleaseLabel: "prometheus"
+  mainAppScrapeInterval: "30s"
+  metricsExporterScrapeInterval: "60s" 

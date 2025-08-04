@@ -19,7 +19,7 @@ from elasticsearch import AsyncElasticsearch
 from prometheus_client import Counter, generate_latest
 from starlette.responses import Response
 
-from .config import settings
+from config import settings
 
 # --- Logging Configuration ---
 logging.basicConfig(level=logging.INFO)
@@ -83,19 +83,24 @@ async def lifespan(app: FastAPI):
     logger.info(f"Initializing Pub/Sub publisher for topic: {settings.PUBSUB_TOPIC_NAME}")
     pubsub_publisher = pubsub_v1.PublisherClient()
 
-    # 6. Initialize Elasticsearch Client
-    logger.info(f"Initializing Elasticsearch client to {settings.ELASTIC_HOST}")
-    es_client = AsyncElasticsearch(
-        hosts=[settings.ELASTIC_HOST],
-        basic_auth=("elastic", settings.ELASTIC_PASSWORD)
-    )
+    # 6. Initialize Elasticsearch Client (with a fallback)
+    if settings.ELASTIC_HOST and settings.ELASTIC_PASSWORD:
+        logger.info(f"Initializing Elasticsearch client to {settings.ELASTIC_HOST}")
+        es_client = AsyncElasticsearch(
+            hosts=[settings.ELASTIC_HOST],
+            basic_auth=("elastic", settings.ELASTIC_PASSWORD)
+        )
+    else:
+        logger.warning("ELASTIC_HOST or ELASTIC_PASSWORD not set. Elasticsearch client will not be initialized.")
+        es_client = None  # Ensure the global variable is set to None
 
     yield  # Application is now running
 
     # --- Shutdown Logic ---
     logger.info("Application shutting down...")
     await redis_client.close()
-    await es_client.close()
+    if es_client:
+        await es_client.close()
     logger.info("Connections closed.")
 
 app = FastAPI(lifespan=lifespan)
@@ -153,14 +158,17 @@ async def perform_task(task_data: TaskData, request: Request):
         REDIS_WRITES_SUCCESS.inc()
         logger.info(f"Task {task_id}: Successfully wrote to Redis.")
 
-        # 3. Write to Elasticsearch
-        await es_client.index(
-            index="tasks_index",
-            id=task_id,
-            document={"id": task_id, "content": task_data.content}
-        )
-        ELASTIC_INDEX_SUCCESS.inc()
-        logger.info(f"Task {task_id}: Successfully indexed in Elasticsearch.")
+        # 3. Write to Elasticsearch (with a check)
+        if es_client:
+            await es_client.index(
+                index="tasks_index",
+                id=task_id,
+                document={"id": task_id, "content": task_data.content}
+            )
+            ELASTIC_INDEX_SUCCESS.inc()
+            logger.info(f"Task {task_id}: Successfully indexed in Elasticsearch.")
+        else:
+            logger.info(f"Task {task_id}: Skipping Elasticsearch write as client is not available.")
 
         # 4. Upload to GCS
         bucket = gcs_client.bucket(settings.GCS_BUCKET_NAME)

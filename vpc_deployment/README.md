@@ -153,7 +153,12 @@ cp /path/to/your/gcp-credentials.json .
 cp /path/to/your/elastic-api-key.txt .
 ```
 
-### 2. Deploy Infrastructure
+Install terraform: 
+- `brew install terraform` (MacOs)
+- `terraform --version`
+
+
+### 2. Deploy Infrastructure (TBD by Customer)
 ```bash
 cd terraform/
 
@@ -163,26 +168,33 @@ terraform init
 # Set Elastic API key
 export EC_API_KEY=$(cat ../elastic-api-key.txt)
 
-# Deploy infrastructure
-terraform plan
-terraform apply
+# Deploy infrastructure (-out makes sure there's no drift between planning and applying)
+terraform plan -out=tfplan
+terraform apply "tfplan"
 ```
 
-### 3. Build and Push Images
+### 3. Build and Push Images (TBD by Vendor)
 ```bash
+# configure docker auth
+gcloud auth configure-docker us-central1-docker.pkg.dev
+
 # Build main application
-docker build -t gcr.io/YOUR_PROJECT/pavo-vpc-main-app:1.0.0 .
-docker push gcr.io/YOUR_PROJECT/pavo-vpc-main-app:1.0.0
+export MAIN_APP_IMAGE_NAME="us-central1-docker.pkg.dev/ml-tool-playground/pavo-vpc/pavo-vpc-main-app:1.0.0"
+docker build -t ${MAIN_APP_IMAGE_NAME} -f Dockerfile .
+docker push ${MAIN_APP_IMAGE_NAME}
 
 # Build metrics exporter
-docker build -t gcr.io/YOUR_PROJECT/pavo-vpc-metrics-exporter:1.0.0 ./metrics_exporter/
-docker push gcr.io/YOUR_PROJECT/pavo-vpc-metrics-exporter:1.0.0
+export METRICS_EXPORTER_IMAGE_NAME="us-central1-docker.pkg.dev/ml-tool-playground/pavo-vpc/pavo-vpc-metrics-exporter:1.0.0"
+docker build -t ${METRICS_EXPORTER_IMAGE_NAME} -f metrics_exporter/Dockerfile ./metrics_exporter
+docker push ${METRICS_EXPORTER_IMAGE_NAME}
 ```
 
-### 4. Deploy Applications
+### 4. Deploy Applications (TBD by Customer)
 ```bash
 # Create values file from Terraform outputs
-cat > my-values.yaml << EOF
+cd terraform && terraform output -json
+
+cat > customer-values.yaml << EOF
 global:
   gcp:
     projectID: "YOUR_PROJECT_ID"
@@ -201,13 +213,43 @@ connections:
   redisInstanceId: "pavo-vpc-redis-cache"
 EOF
 
-# Deploy with Helm
-helm upgrade --install pavo-vpc ./helm-chart \
-  --namespace pavo-vpc-services --create-namespace \
-  -f my-values.yaml \
-  --set mainApp.image.tag="1.0.0" \
-  --set metricsExporter.image.tag="1.0.0"
+#Check helm version
+helm version
+
+#Validate helm chart
+helm lint helm-chart/
+
+#Dry run to see what resources will be created
+helm upgrade --install pavo-vpc-app ./helm-chart -f customer-values.yaml --namespace pavo-services --create-namespace --dry-run
+
+# Deploy with Helm (first time)
+helm upgrade --install pavo-vpc-app ./helm-chart -f customer-values.yaml --namespace pavo-services --create-namespace --set mainApp.image.tag=1.0.0 --set metricsExporter.image.tag=1.0.0
+
+# deploy with Helm (subsequent runs; image tag will be picked from customer-values.yaml)
+helm upgrade pavo-vpc-app ./helm-chart -f customer-values.yaml -n pavo-services
 ```
+
+### 5. Verification
+```bash
+# Check all pods are running properly
+kubectl get pods -n pavo-services -l app.kubernetes.io/instance=pavo-vpc-app
+
+#Check pod logs
+
+#Setup port forwarding for main-app from local machine to Kubernetes (& means run in background)
+kubectl port-forward -n pavo-services svc/pavo-vpc-app-helm-chart-main-app 8080:80 &
+
+# Create a task
+curl -X POST http://localhost:8080/task -H "Content-Type: application/json" -d '{"content": "Test task from successful deployment!"}'
+
+# Expected output
+# INFO:main:Task 899e2a41-4ea9-42a1-bfec-b15f3e37c310: Successfully wrote to PostgreSQL.
+# INFO:main:Task 899e2a41-4ea9-42a1-bfec-b15f3e37c310: Successfully wrote to Redis.
+# INFO:main:Task 899e2a41-4ea9-42a1-bfec-b15f3e37c310: Skipping Elasticsearch write as client is not available.
+# INFO:main:Task 899e2a41-4ea9-42a1-bfec-b15f3e37c310: Successfully uploaded to GCS.
+# INFO:main:Task 899e2a41-4ea9-42a1-bfec-b15f3e37c310: Successfully published to Pub/Sub.
+```
+
 
 ## 📋 Phase-by-Phase Implementation
 
