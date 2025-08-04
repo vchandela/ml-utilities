@@ -33,6 +33,11 @@ output "pubsub_topic_name" {
   value = google_pubsub_topic.main_topic.name
 }
 
+output "app_gcp_service_account_email" {
+  description = "The email of the GCP service account the application will use."
+  value       = google_service_account.vendor_sa.email
+}
+
 # output "elasticsearch_endpoint" {
 #   description = "The HTTPS endpoint for the Elasticsearch cluster."
 #   value       = ec_deployment.pavo_vpc_es.elasticsearch[0].https

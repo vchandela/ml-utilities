@@ -19,7 +19,7 @@ from elasticsearch import AsyncElasticsearch
 from prometheus_client import Counter, generate_latest
 from starlette.responses import Response
 
-from .config import settings
+from config import settings
 
 # --- Logging Configuration ---
 logging.basicConfig(level=logging.INFO)

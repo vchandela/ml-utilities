@@ -24,7 +24,7 @@ serviceAccount:
 mainApp:
   replicaCount: 2
   image:
-    repository: "us-central1-docker.pkg.dev/your-gcp-project-id/pavo-vpc-services/pavo-vpc-main-app"
+    repository: "us-central1-docker.pkg.dev/your-gcp-project-id/pavo-vpc/pavo-vpc-main-app"
     pullPolicy: IfNotPresent
     # The image tag should correspond to the appVersion in Chart.yaml
     tag: "1.0.0"
@@ -33,7 +33,7 @@ mainApp:
 metricsExporter:
   replicaCount: 1
   image:
-    repository: "us-central1-docker.pkg.dev/your-gcp-project-id/pavo-vpc-services/pavo-vpc-metrics-exporter"
+    repository: "us-central1-docker.pkg.dev/your-gcp-project-id/pavo-vpc/pavo-vpc-metrics-exporter"
     pullPolicy: IfNotPresent
     tag: "1.0.0"
 
