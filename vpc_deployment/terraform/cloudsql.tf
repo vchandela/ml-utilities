@@ -12,7 +12,7 @@ resource "random_password" "db_password" {
 resource "google_secret_manager_secret" "db_password_secret" {
   secret_id = "pavo-vpc-db-password"
   replication {
-    automatic = true
+    auto {}
   }
 }
 

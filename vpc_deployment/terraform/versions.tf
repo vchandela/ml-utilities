@@ -14,9 +14,9 @@ terraform {
       source  = "hashicorp/random"
       version = "~> 3.5"
     }
-    ec = {
-      source  = "elastic/ec"
-      version = "~> 0.9"
-    }
+    # ec = {
+    #   source  = "elastic/ec"
+    #   version = "~> 0.9"
+    # }
   }
 } 

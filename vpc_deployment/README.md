@@ -153,6 +153,11 @@ cp /path/to/your/gcp-credentials.json .
 cp /path/to/your/elastic-api-key.txt .
 ```
 
+Install terraform: 
+- `brew install terraform` (MacOs)
+- `terraform --version`
+
+
 ### 2. Deploy Infrastructure
 ```bash
 cd terraform/
@@ -163,9 +168,9 @@ terraform init
 # Set Elastic API key
 export EC_API_KEY=$(cat ../elastic-api-key.txt)
 
-# Deploy infrastructure
-terraform plan
-terraform apply
+# Deploy infrastructure (-out makes sure there's no drift between planning and applying)
+terraform plan -out=tfplan
+terraform apply "tfplan"
 ```
 
 ### 3. Build and Push Images
