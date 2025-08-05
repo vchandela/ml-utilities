@@ -1,0 +1,129 @@
+# ---------------------------------------------------------------------------
+# Values for the 'kube-prometheus-stack' Helm chart.
+#
+# This configuration is specifically tailored for GKE Autopilot clusters,
+# which have security restrictions that prevent some default components
+# (like node-exporter) from running. It also configures Prometheus to
+# discover ServiceMonitors across all namespaces.
+# ---------------------------------------------------------------------------
+
+# 1. Autopilot Guard-Rails: Disable components that require privileged access.
+# ---------------------------------------------------------------------------
+prometheusOperator:
+  # Webhooks require cluster-level permissions that may be restricted.
+  admissionWebhooks:
+    enabled: false
+    patch:
+      enabled: false
+  tls:
+    enabled: false
+
+# node-exporter requires access to the host filesystem, which is forbidden in Autopilot.
+nodeExporter:
+  enabled: false
+
+# GKE manages these components, so we disable the stack's attempt to scrape them.
+kubeControllerManager:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeProxy:
+  enabled: false
+kubeEtcd:
+  enabled: false
+coreDns:
+  enabled: false
+
+# 2. Prometheus Server Configuration
+# ----------------------------------
+prometheus:
+  # This is the core controller that will discover our application's ServiceMonitors.
+  prometheusSpec:
+    # IMPORTANT: These two lines tell the Prometheus Operator to look for
+    # ServiceMonitors and PodMonitors in ALL namespaces, not just its own.
+    # This is what allows it, running in the 'monitoring' namespace, to find
+    # our application's ServiceMonitor in the 'pavo-services' namespace.
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+
+    # Resource requests tailored for a small/medium Autopilot workload.
+    resources:
+      requests:
+        cpu: 200m
+        memory: 500Mi
+    
+    # How long to keep metrics in the local Prometheus database.
+    retention: 10d
+
+    # --- ADVANCED: Remote Write Configuration with Filtering ---
+    # This section configures the in-cluster Prometheus to forward metrics
+    # to our central Grafana Cloud instance with sophisticated filtering.
+    remoteWrite:
+      - url: "https://prometheus-prod-36-prod-us-west-0.grafana.net/api/prom/push" # Replace with your Grafana Cloud URL
+        # We will store the Grafana Cloud credentials in a Kubernetes secret.
+        basicAuth:
+          username:
+            name: grafana-cloud-credentials
+            key: username
+          password:
+            name: grafana-cloud-credentials
+            key: password
+
+    # --- ADVANCED: Filtering for Remote Write (Data Confidentiality) ---
+    # This configuration ensures we get the metrics we need for operational
+    # health monitoring, without exfiltrating sensitive customer data labels.
+    # The rules are processed in order.
+    writeRelabelConfigs:
+      # Rule 1: Keep all infrastructure metrics from our exporter.
+      # These are known to be safe and contain no sensitive labels.
+      - source_labels: [__name__]
+        regex: 'gcp_.*' # Keep any metric starting with 'gcp_'
+        action: keep
+
+      # Rule 2: Keep key application-level metrics that indicate health and volume.
+      - source_labels: [__name__]
+        # This regex matches our core application counters.
+        regex: 'task_requests_total|postgres_writes_success_total|redis_writes_success_total|gcs_uploads_success_total|pubsub_messages_success_total|elastic_index_success_total'
+        action: keep
+
+      # Rule 3: Sanitize the labels for the metrics we just kept in Rule 2.
+      # This rule will drop any label whose name matches the regex.
+      # This is our primary defense against leaking sensitive dimensional data.
+      # For example, if a metric had a label 'customer_id', it would be dropped.
+      - regex: 'customer_id|project_name|user_email|tenant_id' # Add any potentially sensitive label names here.
+        action: labeldrop
+
+      # Rule 4 (Optional but Recommended): A final catch-all to drop everything else.
+      # This ensures that if new, un-vetted metrics are added to the application,
+      # they are not automatically forwarded until they are explicitly allowed
+      # by being added to the 'keep' rules above.
+      - source_labels: [__name__]
+        regex: 'gcp_.*|task_requests_total|postgres_writes_success_total|redis_writes_success_total|gcs_uploads_success_total|pubsub_messages_success_total|elastic_index_success_total'
+        action: keep # This looks redundant, but it's a "whitelist" action.
+      - action: drop # Drop anything that was not explicitly kept by the rules above.
+
+# 3. Grafana Configuration (Optional but useful for in-cluster debugging)
+# --------------------------------------------------------------------
+grafana:
+  enabled: true # We will enable the in-cluster Grafana instance.
+  # Use existing secret for admin credentials (much more secure)
+  admin:
+    existingSecret: grafana-cloud-credentials
+    userKey: admin-user
+    passwordKey: admin-password
+  
+  # Resource requests for the Grafana pod.
+  resources:
+    requests:
+      cpu: 200m
+      memory: 400Mi
+
+# 4. Alertmanager Configuration
+# -----------------------------
+alertmanager:
+  alertmanagerSpec:
+    # Resource requests for the Alertmanager pod.
+    resources:
+      requests:
+        cpu: 100m
+        memory: 150Mi

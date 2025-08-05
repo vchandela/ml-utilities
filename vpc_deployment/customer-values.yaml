@@ -43,9 +43,15 @@ connections:
   redisInstanceId: "pavo-vpc-redis-cache"
 
 # -- ServiceMonitor Configuration --
-# Disabled for initial deployment (Prometheus Operator not installed)
+# ENABLED: We are now setting this to 'true' because the Prometheus Operator
+# is installed and ready to discover our ServiceMonitors.
 serviceMonitor:
-  enabled: false
+  enabled: true
+  
+  # This label must match the default configuration of the kube-prometheus-stack chart's operator.
+  # The default is 'prometheus' which is a common convention.
   prometheusReleaseLabel: "prometheus"
+  
+  # These values are already in our chart's default values.yaml, but we confirm them here.
   mainAppScrapeInterval: "30s"
   metricsExporterScrapeInterval: "60s" 

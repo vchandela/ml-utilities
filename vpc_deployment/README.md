@@ -250,7 +250,31 @@ curl -X POST http://localhost:8080/task -H "Content-Type: application/json" -d '
 # INFO:main:Task 899e2a41-4ea9-42a1-bfec-b15f3e37c310: Successfully published to Pub/Sub.
 ```
 
+## Prometheus Monitoring Support (TBD by customer)
+- `kube-prometheus-stack-values.yaml` is for GKE Autopilot cluster and not GKE Standard cluster
+- Make sure you're in the right cluster: `kubectl config current-context`
+```bash
+# Add Prometheus community Helm repo
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+# [Optional] update the helm repos
+helm repo update
 
+kubectl create namespace monitoring
+# Create secrets (if not already present)
+kubectl create secret generic grafana-cloud-credentials --namespace monitoring --from-literal=admin-user='admin' --from-literal=admin-password='your_strong_password' --from-literal=username='YOUR_GRAFANA_CLOUD_INSTANCE_ID' --from-literal=password='YOUR_GRAFANA_CLOUD_API_KEY'
+# Install kube-prometheus-stack into the 'monitoring' namespace
+helm install prometheus prometheus-community/kube-prometheus-stack --namespace monitoring -f monitoring/kube-prometheus-stack-values.yaml
+# Verify monitoring pods
+kubectl get pods -n monitoring
+# Re-deploy the application using helm (with service monitors enabled)
+RELEASE_NAME="pavo-vpc-app" && NAMESPACE="pavo-services" && echo "Upgrading application release to enable ServiceMonitors..." && helm upgrade --install ${RELEASE_NAME} ./helm-chart --namespace ${NAMESPACE} -f customer-values.yaml
+# Check servicemonitors were created
+kubectl get servicemonitors -n pavo-services
+# Check prometheus targets (Discovery verification)
+kubectl port-forward -n monitoring svc/prometheus-kube-prometheus-prometheus 9090:9090 &
+# Test Prometheus Access and Check Targets Discovery
+curl -s http://localhost:9090/api/v1/targets?state=active | jq '.data.activeTargets[] | select(.labels.job | contains("pavo-vpc-app")) | {job: .labels.job, health: .health, lastScrape: .lastScrape}' # you should see no. of target = no. of total pods
+```
 ## 📋 Phase-by-Phase Implementation
 
 ### Phase 1: Repository Restructuring ✅
