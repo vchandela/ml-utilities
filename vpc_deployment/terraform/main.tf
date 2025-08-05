@@ -8,9 +8,9 @@ provider "google" {
   credentials = file(var.gcp_credentials_path)
 }
 
-# provider "ec" {
-#   # The Elastic Cloud API key should be stored securely, not in code.
-#   # We will pass it as an environment variable when running Terraform.
-#   # Command: export EC_API_KEY=$(cat /path/to/elastic-api-key.txt)
-#   apikey = var.elastic_api_key
-# } 
+provider "ec" {
+  # The Elastic Cloud API key should be stored securely, not in code.
+  # We will pass it as an environment variable when running Terraform.
+  # Command: export EC_API_KEY=$(cat /path/to/pavo-elastic-api-key.txt)
+  apikey = var.elastic_api_key
+} 

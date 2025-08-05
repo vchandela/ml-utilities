@@ -21,7 +21,8 @@ psycopg2-binary # Postgres driver
 redis
 
 # Elasticsearch
-elasticsearch
+elasticsearch<8.14.0 # Pin to version compatible with Elasticsearch 8.11.0
+aiohttp # Required for AsyncElasticsearch client
 
 # Configuration Management
 pydantic-settings 

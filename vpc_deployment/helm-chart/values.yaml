@@ -47,20 +47,26 @@ cloudSqlProxy:
 # These values are sensitive or environment-specific and will be populated
 # from Terraform outputs into a customer-specific values file.
 connections:
-  dbInstanceConnectionName: ""
-  dbPasswordSecretName: "pavo-vpc-db-password" # K8s secret name in Secret Manager
-  redisHost: ""
-  gcsBucketName: ""
-  pubsubTopicName: ""
-  elasticHost: ""
-  # IMPORTANT: The password will be passed via --set or a secret values file
-  elasticPassword: ""
+  # Cloud SQL connection string (from terraform output)
+  dbInstanceConnectionName: "" # e.g., "your-project:region:instance-name"
+  dbPasswordSecretName: "pavo-vpc-db-password" # Secret name in GCP Secret Manager
+  # Redis internal IP (from terraform output)
+  redisHost: "" # e.g., "10.x.x.x"
+  # GCS bucket name (from terraform output)
+  gcsBucketName: "" # e.g., "your-project-pavo-vpc-storage-bucket"
+  # Pub/Sub topic name (from terraform output)
+  pubsubTopicName: "" # e.g., "pavo-vpc-tasks-topic"
+  
+  # Elasticsearch configuration (from terraform output after provisioning)
+  elasticHost: "" # e.g., "https://deployment-id.region.gcp.cloud.es.io:443"
+  elasticPassword: "" # From terraform output 'elasticsearch_password'
 
-  # For the metrics exporter
-  dbInstanceId: ""
-  redisInstanceId: ""
+  # For the metrics exporter (fixed instance names)
+  dbInstanceId: "pavo-vpc-postgres-instance"
+  redisInstanceId: "pavo-vpc-redis-cache"
 
 # -- Prometheus ServiceMonitor configuration --
+# Enable this after installing the Prometheus Operator (kube-prometheus-stack)
 serviceMonitor:
   enabled: true
   # This label must match the 'release' label on your Prometheus Operator installation

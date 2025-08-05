@@ -6,7 +6,6 @@ global:
   gcp:
     projectID: "ml-tool-playground"
     region: "us-central1"
-    # Note: Service account email should be configured separately if needed
     serviceAccountEmail: "vendor-deployment-sa@ml-tool-playground.iam.gserviceaccount.com"
 
 # -- Main Application Configuration --
@@ -15,7 +14,7 @@ mainApp:
   image:
     repository: "us-central1-docker.pkg.dev/ml-tool-playground/pavo-vpc/pavo-vpc-main-app"
     pullPolicy: IfNotPresent
-    tag: "1.0.1"
+    tag: "1.0.2"
 
 # -- Metrics Exporter Configuration --
 metricsExporter:
@@ -34,24 +33,22 @@ connections:
   gcsBucketName: "ml-tool-playground-pavo-vpc-storage-bucket"
   pubsubTopicName: "pavo-vpc-tasks-topic"
   
-  # Elasticsearch - temporarily empty (as planned)
-  elasticHost: ""
-  elasticPassword: ""
+  # Elasticsearch - now enabled with real values
+  elasticHost: "https://ef1ceea5696641718da869927e8e5445.us-central1.gcp.cloud.es.io:443"
+  elasticPassword: "IhuVt8d43ayKVHPNoAAfaXpS"
   
   # For metrics exporter
   dbInstanceId: "pavo-vpc-postgres-instance"
   redisInstanceId: "pavo-vpc-redis-cache"
 
 # -- ServiceMonitor Configuration --
-# ENABLED: We are now setting this to 'true' because the Prometheus Operator
-# is installed and ready to discover our ServiceMonitors.
+# ENABLED: ServiceMonitors are enabled since Prometheus Operator is running
 serviceMonitor:
   enabled: true
   
   # This label must match the default configuration of the kube-prometheus-stack chart's operator.
-  # The default is 'prometheus' which is a common convention.
   prometheusReleaseLabel: "prometheus"
   
-  # These values are already in our chart's default values.yaml, but we confirm them here.
+  # Scrape intervals for monitoring
   mainAppScrapeInterval: "30s"
-  metricsExporterScrapeInterval: "60s" 
+  metricsExporterScrapeInterval: "60s"

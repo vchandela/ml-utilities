@@ -38,13 +38,13 @@ output "app_gcp_service_account_email" {
   value       = google_service_account.vendor_sa.email
 }
 
-# output "elasticsearch_endpoint" {
-#   description = "The HTTPS endpoint for the Elasticsearch cluster."
-#   value       = ec_deployment.pavo_vpc_es.elasticsearch[0].https
-# }
+output "elasticsearch_endpoint" {
+  description = "The HTTPS endpoint for the Elasticsearch cluster."
+  value       = ec_deployment.vpc_es.elasticsearch.https_endpoint
+}
 
-# output "elasticsearch_password" {
-#   description = "The password for the 'elastic' superuser."
-#   value       = ec_deployment.pavo_vpc_es.elasticsearch_password
-#   sensitive   = true
-# } 
+output "elasticsearch_password" {
+  description = "The password for the 'elastic' superuser."
+  value       = ec_deployment.vpc_es.elasticsearch_password
+  sensitive   = true
+} 

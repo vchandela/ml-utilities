@@ -20,8 +20,8 @@ variable "gcp_credentials_path" {
   default     = "../gcp-credentials.json" // Assumes key is in root
 }
 
-# variable "elastic_api_key" {
-#   description = "API Key for Elastic Cloud."
-#   type        = string
-#   sensitive   = true # Prevents it from being shown in logs
-# } 
+variable "elastic_api_key" {
+  description = "API Key for Elastic Cloud."
+  type        = string
+  sensitive   = true # Prevents it from being shown in logs
+} 
