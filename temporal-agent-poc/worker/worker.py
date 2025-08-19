@@ -8,7 +8,7 @@ from temporalio.client import Client
 from temporalio.worker import Worker
 from .workflows import OrchestrateTaskWorkflow
 from .activities import (
-    init_task, gather_context, create_plan_v1, mark_wait_rfc,
+    init_task, gather_context, create_plan_v1, revise_plan_with_feedback, mark_wait_rfc,
     execute_batch, mark_done, mark_stopped
 )
 
@@ -22,7 +22,7 @@ async def main():
         task_queue=task_queue,
         workflows=[OrchestrateTaskWorkflow],
         activities=[
-            init_task, gather_context, create_plan_v1, mark_wait_rfc,
+            init_task, gather_context, create_plan_v1, revise_plan_with_feedback, mark_wait_rfc,
             execute_batch, mark_done, mark_stopped
         ],
     )

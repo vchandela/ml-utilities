@@ -33,6 +33,12 @@ async def create_plan_v1(task_id):
     await publish_event(task_id, {"type":"plan","doc_id":str(doc_id),"version":1})
 
 @activity.defn
+async def revise_plan_with_feedback(task_id, feedback_text: str, version: int = 2):
+    plan_text = planner.plan_v2_with_feedback(task_id, feedback_text)
+    doc_id = planner.persist_plan(task_id, plan_text, version=version)
+    await publish_event(task_id, {"type":"plan_revised","doc_id":str(doc_id),"version":version,"feedback":feedback_text})
+
+@activity.defn
 async def mark_wait_rfc(task_id):
     with SessionLocal() as db:
         t = db.get(Task, UUID(task_id))

@@ -138,20 +138,29 @@ async def doc_status(task_id: str, document_id: str, payload: DocumentStatusActi
     user = ensure_user(x_user_id, x_user_email)
     if payload.action != "done_reviewing":
         raise HTTPException(status_code=400, detail="Unsupported action")
+    
     with SessionLocal() as db:
         task = db.get(Task, UUID(task_id))
         if not task or task.user_id != user.id:
             raise HTTPException(status_code=404, detail="Task not found")
+        
+        # Update document status
         n = db.query(TaskDocument).filter(TaskDocument.id==UUID(document_id),
                                           TaskDocument.task_id==UUID(task_id)).update({"status": "LOCKED"})
         if n == 0:
             raise HTTPException(status_code=404, detail="Document not found")
+        
+        # Gather all feedback for this document
+        feedback_list = db.query(Feedback).filter(Feedback.document_id==UUID(document_id)).all()
+        combined_feedback = " | ".join([f.body for f in feedback_list]) if feedback_list else None
+        
         db.commit()
         wf_id = task.workflow_id or workflow_id_for(str(user.id), str(task.id), task.agent_type)
+    
     client = await get_temporal_client()
     handle = client.get_workflow_handle(wf_id)
-    await handle.signal("signal_resume", None)
-    return {"ok": True}
+    await handle.signal("signal_resume", combined_feedback)
+    return {"ok": True, "feedback_count": len(feedback_list) if feedback_list else 0}
 
 @router.post("/tasks/{task_id}/force-stop")
 async def force_stop(task_id: str, x_user_id: str = Header(None), x_user_email: str = Header(None)):

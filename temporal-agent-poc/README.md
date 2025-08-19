@@ -40,6 +40,15 @@ export DATABASE_URL="postgresql+psycopg2://dev:dev@localhost:5432/intern"
 export REDIS_URL="redis://localhost:6379/0"
 #Run it as a module
 python -m worker.worker
+
+
+#To make sure worker was killed nicely. Normally Ctrl+C is enough
+# Find the process ID
+ps aux | grep "worker.worker"
+# Kill gracefully first
+kill <PID>  
+# Force kill if needed
+kill -9 <PID>
 ```
 
 **4. Access UI**
@@ -61,12 +70,22 @@ python -m worker.worker
 5. **Complete**: Watch execution (via `GET /tasks/{task_id}/stream` SSE)
    - execute_batch activities run with progress ticks, heartbeat signals, status → DONE
 
-**✅ Test 2: Crash Recovery (Key Feature!)**  
+**✅ Test 2: Feedback Path**
+1. **Setup**: Complete steps 1-3 from Happy Path (task in WAIT_RFC/PAUSED state)
+2. **Add Feedback**: Type "Add more details about data sources" → Click "Add Feedback"
+   - Saves feedback to database linked to plan document (invokes `POST /tasks/{task_id}/document/{doc_id}/feedback/add`)
+3. **Submit Review**: Click "Done Reviewing Plan" (invokes `POST /tasks/{task_id}/document/{doc_id}/status`)
+   - Sends signal_resume with feedback to workflow, workflow creates Plan v2 incorporating feedback
+   - New TaskDocument saved with version="2", status updates to PLANNING → WAIT_RFC again
+4. **Accept Revised**: Click "Accept Plan" to accept Plan v2 → execution begins with revised plan
+   - Tests iterative human-AI collaboration and plan versioning
+
+**✅ Test 3: Crash Recovery (Key Feature!)**  
 1. Start task → Accept plan → During execution: `Ctrl+C` worker
 2. Restart worker → Observe: **Automatic resume from last checkpoint**
 3. Verify: No lost progress, workflow continues exactly where stopped
 
-**✅ Test 3: Graceful Stop**
+**✅ Test 4: Graceful Stop**
 1. Start task → Accept plan → Click "Stop" button  
 2. Verify: Clean shutdown, status = `STOPPED`
 
@@ -74,6 +93,6 @@ python -m worker.worker
 - [x] Infrastructure setup completed ✅
 - [x] Backend API server started ✅  
 - [x] Temporal worker started ✅
-- [ ] Happy path test passed
-- [ ] Crash recovery test passed  
-- [ ] Graceful stop test passed
+- [x] Happy path test passed
+- [x] Crash recovery test passed  
+- [x] Graceful stop test passed

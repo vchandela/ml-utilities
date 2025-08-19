@@ -14,6 +14,8 @@ class OrchestrateTaskWorkflow:
         self.stopping = False
         self.paused = False
         self.accepted = False
+        self.feedback_text = None
+        self.plan_version = 1
 
     @workflow.run
     async def run(self, task_id: str, user_id: str, agent_type: str, title: str):
@@ -38,21 +40,35 @@ class OrchestrateTaskWorkflow:
             args=[task_id],
             start_to_close_timeout=timedelta(seconds=30),
         )
-        self.paused = True
-        await workflow.execute_activity(
-            act.mark_wait_rfc,
-            args=[task_id],
-            start_to_close_timeout=timedelta(seconds=15),
-        )
-
-        # Wait until accepted or stopped (no polling)
-        await workflow.wait_condition(lambda: self.accepted or self.stopping)
-
-        if self.stopping:
+        
+        # Plan revision loop - allows multiple iterations of feedback
+        while not self.accepted and not self.stopping:
+            self.paused = True
             await workflow.execute_activity(
-                act.mark_stopped, args=[task_id], start_to_close_timeout=timedelta(seconds=15)
+                act.mark_wait_rfc,
+                args=[task_id],
+                start_to_close_timeout=timedelta(seconds=15),
             )
-            return
+
+            # Wait until accepted, feedback received, or stopped
+            await workflow.wait_condition(lambda: self.accepted or self.feedback_text or self.stopping)
+
+            if self.stopping:
+                await workflow.execute_activity(
+                    act.mark_stopped, args=[task_id], start_to_close_timeout=timedelta(seconds=15)
+                )
+                return
+
+            # If feedback received, revise plan
+            if self.feedback_text and not self.accepted:
+                self.plan_version += 1
+                await workflow.execute_activity(
+                    act.revise_plan_with_feedback,
+                    args=[task_id, self.feedback_text, self.plan_version],
+                    start_to_close_timeout=timedelta(seconds=30),
+                )
+                # Reset feedback for next iteration
+                self.feedback_text = None
 
         # EXECUTION in durable batches
         while True:
@@ -90,7 +106,8 @@ class OrchestrateTaskWorkflow:
 
     @workflow.signal
     def signal_resume(self, feedback_text: str | None = None):
-        # You can persist feedback via an activity if needed
+        if feedback_text:
+            self.feedback_text = feedback_text
         self.paused = False
 
     @workflow.signal
@@ -100,4 +117,4 @@ class OrchestrateTaskWorkflow:
 
     @workflow.query
     def query_status(self) -> dict:
-        return {"stopping": self.stopping, "paused": self.paused, "accepted": self.accepted}
+        return {"stopping": self.stopping, "paused": self.paused, "accepted": self.accepted, "plan_version": self.plan_version}
