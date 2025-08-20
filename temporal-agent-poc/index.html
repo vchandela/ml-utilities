@@ -1,0 +1,172 @@
+<!doctype html>
+<!--
+Temporal Agent POC - Frontend UI
+Single-page application demonstrating durable workflow orchestration.
+Features: user auth, task creation/control, real-time SSE streaming, feedback management.
+Connects to FastAPI backend which orchestrates Temporal workflows for agent task execution.
+-->
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Temporal Agent POC</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 20px; background: #f0f2f5; color: #333; }
+    .row { display:flex; gap:20px; }
+    .col { flex:1; background: #fff; border:1px solid #ddd; padding:18px; border-radius:12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+    h2, h3, h4 { color: #1a202c; }
+    input, select, button, textarea { font-family: inherit; font-size: 14px; padding:10px; margin:6px 0; width:100%; box-sizing: border-box; border-radius: 6px; border: 1px solid #ccc; }
+    button { background: #4a90e2; color: white; border: none; cursor: pointer; font-weight: bold; }
+    button:hover { background: #357abd; }
+    pre { background:#2d3748; color:#9ae6b4; padding:12px; height:300px; overflow:auto; border-radius: 6px; font-family: 'Courier New', Courier, monospace; font-size: 13px; }
+    .task { padding:10px; border-bottom:1px solid #eee; cursor:pointer; transition: background 0.2s; }
+    .task:hover { background:#f7fafc; }
+    .pill { display:inline-block; padding:3px 9px; border-radius:999px; background:#e2e8f0; margin-left:8px; font-size: 12px; font-weight: 500; }
+    #sel { background: #edf2f7; padding: 10px; border-radius: 6px; white-space: pre-wrap; font-family: monospace; }
+  </style>
+</head>
+<body>
+  <h2>Temporal Agent POC</h2>
+  <div class="row">
+    <div class="col">
+      <h3>Login</h3>
+      <label for="email">Email</label>
+      <input id="email" placeholder="you@company.com"/>
+      <button onclick="login()">Login / Refresh Tasks</button>
+      <div id="me"></div>
+      <hr/>
+      <h3>Create Task</h3>
+      <label for="title">Title</label>
+      <input id="title" placeholder="Analyze churn drivers"/>
+      <label for="agent">Agent Type</label>
+      <select id="agent"><option value="intern">Intern (Complex Flow)</option><option value="tribal_search">Tribal Search</option></select>
+      <button onclick="createTask()">Create Task</button>
+      <div id="taskList"></div>
+    </div>
+    <div class="col">
+      <h3>Selected Task</h3>
+      <pre id="sel">No task selected</pre>
+      <button onclick="startTask()">Start</button>
+      <button onclick="acceptRFC()">Accept Plan</button>
+      <button onclick="doneReviewing()">Done Reviewing Plan</button>
+      <button onclick="stopTask()">Stop</button>
+      <hr/>
+      <h4>Feedback on Plan</h4>
+      <textarea id="fb" placeholder="Your feedback for plan revision..."></textarea>
+      <button onclick="addFeedback()">Add Feedback</button>
+      <hr/>
+      <h3>Real-time Stream</h3>
+      <pre id="stream"></pre>
+    </div>
+  </div>
+
+<script>
+let user = null, tasks = [], selected = null, evtSrc = null;
+const API = "http://localhost:8000";
+
+function headers() {
+  const h = {"Content-Type": "application/json"};
+  if (user && user.user_id) { h["X-User-Id"] = user.user_id; }
+  if (user && user.email) { h["X-User-Email"] = user.email; }
+  return h;
+}
+
+async function login() {
+  const emailInput = document.getElementById("email");
+  const email = emailInput.value || emailInput.placeholder;
+  const res = await fetch(API+"/me_v2", {headers: {"X-User-Email": email}});
+  user = (await res.json()); renderUser(); await refreshTasks();
+}
+
+function renderUser() {
+  if (!user) return;
+  document.getElementById("me").innerHTML = `<div><b>Logged in as: ${user.email}</b><br/>user_id=${user.user_id}</div>`;
+}
+
+async function refreshTasks() {
+  const res = await fetch(API+"/me_v2", {headers: headers()});
+  user = (await res.json());
+  tasks = user.tasks || [];
+  const list = tasks.map(t => `<div class="task" onclick='selectTask("${t.id}")'>
+    <b>${t.title}</b><span class="pill">${t.agent_type}</span>
+    <div>Status: ${t.stage || 'N/A'} / ${t.stage_status || 'N/A'}</div>
+  </div>`).join("");
+  document.getElementById("taskList").innerHTML = `<h4>My Tasks (${tasks.length})</h4>${list}`;
+}
+
+async function createTask() {
+  const title = document.getElementById("title").value;
+  if (!title) { alert("Please enter a title."); return; }
+  const agent_type = document.getElementById("agent").value;
+  const res = await fetch(API+"/create_task_id", {
+    method: "POST", headers: headers(),
+    body: JSON.stringify({title, agent_type})
+  });
+  const data = await res.json();
+  await refreshTasks();
+  selectTask(data.task_id);
+}
+
+function selectTask(id) {
+  selected = tasks.find(t => t.id === id) || {id};
+  document.getElementById("sel").innerText = JSON.stringify(selected, null, 2);
+  if (evtSrc) { evtSrc.close(); }
+  const streamEl = document.getElementById("stream");
+  streamEl.innerText = "Connecting to stream...\n";
+  evtSrc = new EventSource(API+`/tasks/${id}/stream`);
+  evtSrc.onmessage = (e) => {
+    streamEl.innerText += e.data + "\n";
+    streamEl.scrollTop = streamEl.scrollHeight; // Auto-scroll
+    refreshTasks();
+  };
+  evtSrc.onerror = () => { streamEl.innerText += "Stream connection error.\n"; };
+}
+
+async function startTask() {
+  if (!selected) { alert("Select a task first."); return; }
+  await fetch(API+`/tasks/${selected.id}/message`, {method:"POST", headers: headers()});
+}
+
+async function acceptRFC() {
+  if (!selected) { alert("Select a task first."); return; }
+  await fetch(API+`/tasks/${selected.id}/accept_rfc`, {method:"POST", headers: headers()});
+}
+
+async function doneReviewing() {
+  if (!selected) { alert("Select a task first."); return; }
+  const docId = findLastDocId();
+  if (!docId) { alert("No plan document found in stream to review."); return; }
+  await fetch(API+`/tasks/${selected.id}/document/${docId}/status`, {
+    method:"POST", headers: headers(), body: JSON.stringify({action:"done_reviewing"})
+  });
+}
+
+async function addFeedback() {
+  if (!selected) { alert("Select a task first."); return; }
+  const docId = findLastDocId();
+  if (!docId) { alert("No plan document found in stream to add feedback to."); return; }
+  const body = document.getElementById("fb").value;
+  if (!body) { alert("Feedback text cannot be empty."); return; }
+  await fetch(API+`/tasks/${selected.id}/document/${docId}/feedback/add`, {
+    method:"POST", headers: headers(), body: JSON.stringify({body})
+  });
+  document.getElementById("fb").value = "";
+}
+
+async function stopTask() {
+  if (!selected) { alert("Select a task first."); return; }
+  await fetch(API+`/tasks/${selected.id}/force-stop`, {method:"POST", headers: headers()});
+}
+
+function findLastDocId() {
+  const lines = document.getElementById("stream").innerText.trim().split("\n");
+  for (let i = lines.length - 1; i >= 0; i--) {
+    try {
+      const evt = JSON.parse(lines[i]);
+      if (evt && evt.type === "plan" && evt.doc_id) return evt.doc_id;
+    } catch(e) {}
+  }
+  return null;
+}
+</script>
+</body>
+</html>
