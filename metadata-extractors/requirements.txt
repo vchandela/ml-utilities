@@ -17,4 +17,9 @@ requests>=2.28.1
 # Bitbucket Connector Dependencies  
 # (requests is already listed above)
 aiohttp>=3.8.0
+
+# Golden Query Feature Extractor Dependencies
+pandas>=2.0.0
+sqlglot>=18.5.1
+
 # subprocess, mimetypes, os, shutil, time are standard libraries 
