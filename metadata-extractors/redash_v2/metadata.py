@@ -1057,7 +1057,7 @@ class RedashMetadataExtractor:
         # Step 3: Define CSV column order (Phase 4 requirement - exact specification from plan)
         dashboard_column_order = [
             'id', 'name', 'golden_dashboard_score', 'content_quality_score', 
-            'recency_score', 'curation_score', 'user_name', 'updated_at', 'created_at'
+            'recency_score', 'curation_score', 'user_name', 'updated_at', 'created_at', 'slug'
         ]
         
         # Filter columns to only include those that exist in the DataFrame
