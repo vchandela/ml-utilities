@@ -5,29 +5,27 @@ Golden Query Feature Extractor (Proof of Concept)
 This script implements a detailed feature extraction process for BigQuery queries
 to support the "Golden Queries" ranking initiative.
 
-**Objective of this PoC:**
-To extract a rich set of features for a sample of the ~50 most frequently used
-query patterns in the last 180 days. The output will be a single JSON file
-that can be analyzed to refine the final query scoring logic.
+**Objective of this Analysis:**
+To extract a rich set of features for ALL query patterns in the last 180 days.
+The output will be JSON and CSV files that can be analyzed to refine the 
+final query scoring logic.
 
 **Workflow:**
 1.  **Connect & Configure:** Establishes a connection to BigQuery using
     service account credentials.
 2.  **Raw Job Ingestion:** Fetches the full history of query jobs from the
     last 180 days across all active regions in the project.
-3.  **Candidate Identification:** Identifies the top 50 most frequent raw SQL
-    queries from the job history to act as our PoC sample.
-4.  **Normalization & Grouping:** For the jobs in our sample, normalizes the SQL
+3.  **Normalization & Grouping:** For all jobs, normalizes the SQL
     text to create a canonical "query shape" and groups all executions
     of the same shape together.
-5.  **Feature Extraction:** For each unique query shape, calculates a
+4.  **Feature Extraction:** For each unique query shape, calculates a
     comprehensive set of features across several categories:
     - Execution & Usage
     - Authorship & Ownership
     - Lineage & Asset Interaction
     - Structural Complexity
-6.  **Output:** Writes the final list of feature-rich query shape objects
-    to a JSON file for analysis.
+5.  **Output:** Writes the final list of feature-rich query shape objects
+    to JSON and CSV files for analysis.
 """
 
 import os
@@ -40,6 +38,7 @@ from datetime import datetime, timezone, timedelta
 from collections import Counter
 from statistics import stdev
 from typing import Dict, List, Any, Tuple, Optional
+from asyncio import Queue
 
 # Add the parent directory to the path to import from bigquery module
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
@@ -68,6 +67,8 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+
+
 class GoldenQueryFeatureExtractor(BigQueryMetadataExtractor):
     """
     Extends the BigQueryMetadataExtractor to perform detailed feature extraction
@@ -92,6 +93,7 @@ class GoldenQueryFeatureExtractor(BigQueryMetadataExtractor):
         """
         # This query is designed to fetch all necessary fields for the subsequent
         # feature extraction process.
+        # Add row limit to prevent timeout on very large datasets
         query = f"""
             SELECT
                 query,
@@ -109,46 +111,116 @@ class GoldenQueryFeatureExtractor(BigQueryMetadataExtractor):
                 job_type = 'QUERY'
                 AND state = 'DONE'
                 AND start_time >= '{start_date.isoformat()}'
+            ORDER BY start_time DESC
         """
         try:
+            logger.info("Executing query for region %s...", region)
             query_job = await asyncio.to_thread(self.client.query, query)
-            # The result of referenced_tables is a list of structs. We must unpack it.
-            rows = []
-            for row in query_job:
-                # Handle destination_table safely
-                dest_table = None
-                if row.destination_table:
-                    try:
-                        dest_table = f"{row.destination_table['project_id']}.{row.destination_table['dataset_id']}.{row.destination_table['table_id']}"
-                    except (KeyError, TypeError) as e:
-                        logger.debug("Destination table parsing error: %s", e)
-                        dest_table = str(row.destination_table)  # Fallback to string representation
+            logger.info("Query submitted for region %s, waiting for results...", region)
+            
+            # Get total row count before processing (doesn't load all data)
+            result = query_job.result()
+            total_rows = result.total_rows
+            logger.info(f"Query completed for region {region}, total rows found: {total_rows:,}")
+            logger.info(f"Starting to process {total_rows:,} rows for region {region}...")
+            
+            
+            # Producer-consumer pattern for parallel streaming processing
+            async def producer(result_iterator, task_queue, batch_size=5000):
+                """Producer: feeds BigQuery rows directly to queue"""
+                batch = []
+                batch_count = 0
+                for row in result_iterator:
+                    # Pass BigQuery Row objects directly (no conversion needed)
+                    batch.append(row)
+                    if len(batch) % 1000 == 0:
+                        logger.info(f"Producer: Added 1000 rows to batch {batch_count}, batch size: {len(batch)}")
+                    if len(batch) >= batch_size:
+                        # Debug: Check if queue is getting full
+                        if task_queue.qsize() >= 45:  # Near max capacity
+                            logger.info(f"Producer waiting - queue full ({task_queue.qsize()}/50)")
+                        await task_queue.put(batch)
+                        batch = []
+                        batch_count += 1
+                        
+                        # Debug: Log producer progress periodically
+                        if batch_count % 100 == 0:
+                            logger.info(f"Producer: {batch_count} batches sent, queue size: {task_queue.qsize()}")
                 
-                # Handle referenced_tables safely  
-                ref_tables = []
-                if row.referenced_tables:
-                    try:
-                        ref_tables = [f"{t['project_id']}.{t['dataset_id']}.{t['table_id']}" for t in row.referenced_tables]
-                    except (KeyError, TypeError) as e:
-                        logger.debug("Referenced tables parsing error: %s", e)
-                        ref_tables = [str(t) for t in row.referenced_tables]  # Fallback
+                # Put remaining rows
+                if batch:
+                    await task_queue.put(batch)
+                    batch_count += 1
                 
-                rows.append({
-                    "query": row.query,
-                    "user_email": row.user_email,
-                    "creation_time": row.creation_time,
-                    "start_time": row.start_time,
-                    "end_time": row.end_time,
-                    "statement_type": row.statement_type,
-                    "destination_table": dest_table,
-                    "referenced_tables": ref_tables,
-                    "job_id": row.job_id
-                })
+                # Signal completion
+                await task_queue.put(None)
+                logger.info(f"Producer finished: {batch_count} batches sent")
 
-                # TODO: Remove this after testing. Stop after fetching 100 jobs
-                if len(rows) >= 100:
-                    break
-            logger.info("Fetched %d raw job records from region: %s", len(rows), region)
+            async def consumer(task_queue, results_list, region):
+                """Consumer: simple direct processing without multiprocessing overhead"""
+                total_processed = 0
+                batch_count = 0
+                
+                while True:
+                    batch = await task_queue.get()
+                    logger.info(f"Consumer: Processing batch {batch_count} with {len(batch)} rows")
+                    if batch is None:
+                        break
+                    
+                    batch_count += 1
+                    
+                    # Process batch directly with BigQuery Row objects
+                    batch_results = []
+                    for row in batch:
+                        # Handle destination_table safely
+                        dest_table = None
+                        if row.destination_table:
+                            try:
+                                dest_table = f"{row.destination_table['project_id']}.{row.destination_table['dataset_id']}.{row.destination_table['table_id']}"
+                            except (KeyError, TypeError):
+                                dest_table = str(row.destination_table)
+                        
+                        # Handle referenced_tables safely  
+                        ref_tables = []
+                        if row.referenced_tables:
+                            try:
+                                ref_tables = [f"{t['project_id']}.{t['dataset_id']}.{t['table_id']}" for t in row.referenced_tables]
+                            except (KeyError, TypeError):
+                                ref_tables = [str(t) for t in row.referenced_tables]
+                        
+                        batch_results.append({
+                            "query": row.query,
+                            "user_email": row.user_email,
+                            "creation_time": row.creation_time,
+                            "start_time": row.start_time,
+                            "end_time": row.end_time,
+                            "statement_type": row.statement_type,
+                            "destination_table": dest_table,
+                            "referenced_tables": ref_tables,
+                            "job_id": row.job_id
+                        })
+                    
+                    results_list.extend(batch_results)
+                    total_processed += len(batch_results)
+                    
+                    # Debug: Progress logging
+                    if total_processed % 10000 == 0:
+                        logger.info(f"Region {region}: Processed {total_processed} rows (direct processing) - queue: {task_queue.qsize()}")
+                
+                logger.info(f"Region {region}: Final count - {total_processed} rows, {batch_count} batches processed")
+
+            # Create queue and run producer-consumer
+            task_queue = Queue(maxsize=50)  # Buffer up to 50 batches
+            rows = []
+
+            # Run producer and consumer concurrently
+            producer_task = asyncio.create_task(producer(result, task_queue))
+            consumer_task = asyncio.create_task(consumer(task_queue, rows, region))
+
+            # Wait for both to complete
+            await asyncio.gather(producer_task, consumer_task)
+            
+            logger.info("Fetched %d raw job records from region: %s (processed directly)", len(rows), region)
             return rows
         except Exception as e:
             logger.warning("Failed to fetch raw jobs from region %s: %s", region, e)
@@ -176,22 +248,28 @@ class GoldenQueryFeatureExtractor(BigQueryMetadataExtractor):
 
         # Step 2: Concurrently fetch job history from all discovered regions.
         # This dramatically speeds up the data collection process.
+        logger.info("Fetching jobs from %d regions concurrently...", len(regions))
         tasks = [self._fetch_raw_jobs_for_region(region, start_date) for region in regions]
         regional_results = await asyncio.gather(*tasks)
 
         # Step 3: Aggregate results into a single list and convert to a DataFrame.
-        all_jobs = [job for result in regional_results for job in result]
+        all_jobs = []
+        for i, result in enumerate(regional_results):
+            region_name = regions[i]
+            logger.info("Region %s: Fetched %d jobs", region_name, len(result))
+            all_jobs.extend(result)
+            
         if not all_jobs:
             logger.warning("No jobs found in the specified time window.")
             return pd.DataFrame()
         
-        logger.info("Phase 1 complete: Ingested a total of %d jobs.", len(all_jobs))
+        logger.info("Phase 1 complete: Ingested a total of %d jobs from %d regions.", len(all_jobs), len(regions))
         return pd.DataFrame(all_jobs)
 
 
-def identify_top_candidates(jobs_df: pd.DataFrame, num_candidates: int = 50) -> Tuple[set, pd.Series]:
+def identify_top_candidates(jobs_df: pd.DataFrame, num_candidates: int = 50000) -> Tuple[set, pd.Series]:
     """
-    Identifies the most frequently executed raw queries to form the PoC sample.
+    Identifies the most frequently executed raw queries to form the analysis sample.
 
     Reasoning:
     Before performing expensive parsing on all jobs, we create a high-value sample
@@ -311,6 +389,160 @@ def is_temporary_write(destination_table: Optional[str]) -> bool:
     return any(pattern in table_id for pattern in temp_patterns)
 
 
+def calculate_hours_since_last_run(last_execution_timestamp: str) -> Optional[float]:
+    """
+    Calculate the number of hours since the last execution.
+    
+    Args:
+        last_execution_timestamp: ISO timestamp string of the last execution
+    
+    Returns:
+        Number of hours since last run, or None if parsing fails
+    """
+    try:
+        last_run = datetime.fromisoformat(last_execution_timestamp.replace('Z', '+00:00'))
+        now = datetime.now(timezone.utc)
+        return (now - last_run).total_seconds() / 3600  # Convert to hours
+    except Exception:
+        return None
+
+
+def calculate_regularity_hours(execution_regularity_stdev) -> str:
+    """
+    Convert execution regularity from seconds to hours.
+    For single executions, returns "SINGLE_EXECUTION".
+    
+    Args:
+        execution_regularity_stdev: Standard deviation of execution intervals in seconds, or "SINGLE_EXECUTION"
+    
+    Returns:
+        Standard deviation in hours as string, or "SINGLE_EXECUTION" if input indicates single execution
+    """
+    if execution_regularity_stdev == "SINGLE_EXECUTION":
+        return "SINGLE_EXECUTION"
+    try:
+        hours = execution_regularity_stdev / 3600  # Convert seconds to hours
+        return f"{hours:.2f}"  # Return as formatted string
+    except Exception:
+        return "SINGLE_EXECUTION"
+
+
+def calculate_raw_complexity_score(join_count: int, cte_count: int, window_function_count: int, 
+                                 subquery_count: int, aggregation_presence: bool) -> int:
+    """
+    Calculate the raw complexity score based on SQL structural features.
+    
+    Args:
+        join_count: Number of joins
+        cte_count: Number of CTEs
+        window_function_count: Number of window functions
+        subquery_count: Number of subqueries
+        aggregation_presence: Whether aggregation is present
+    
+    Returns:
+        Raw complexity score (integer)
+    """
+    try:
+        score = (join_count + 
+                2 * cte_count + 
+                3 * window_function_count + 
+                subquery_count + 
+                (1 if aggregation_presence else 0))
+        return score
+    except Exception:
+        return 0
+
+
+def normalize_complexity_scores(raw_scores: List[int]) -> List[float]:
+    """
+    Normalize complexity scores to [0,1] range using the actual maximum from the data.
+    
+    Args:
+        raw_scores: List of raw complexity scores
+    
+    Returns:
+        List of normalized complexity scores between 0.0 and 1.0
+    """
+    if not raw_scores:
+        return []
+    
+    max_score = max(raw_scores)
+    if max_score == 0:
+        return [0.0] * len(raw_scores)
+    
+    return [score / max_score for score in raw_scores]
+
+
+def calculate_source_table_count(source_tables: List[str]) -> int:
+    """
+    Count the number of source tables.
+    
+    Args:
+        source_tables: List of source table identifiers
+    
+    Returns:
+        Number of source tables
+    """
+    try:
+        if not source_tables:
+            return 0
+        return len(source_tables)
+    except Exception:
+        return 0
+
+
+def is_service_account(user_email: str) -> bool:
+    """
+    Determine if a user email is a service account.
+    
+    Args:
+        user_email: Email address of the user
+    
+    Returns:
+        True if the email appears to be a service account, False otherwise
+    """
+    try:
+        import re
+        return bool(re.search(r'\.iam\.gserviceaccount\.com$', user_email, re.IGNORECASE))
+    except Exception:
+        return False
+
+
+def has_persistent_destination(destination_table: Optional[str], is_temp_write: bool) -> bool:
+    """
+    Determine if the query has a persistent destination table.
+    
+    Args:
+        destination_table: The destination table identifier
+        is_temp_write: Whether the write is temporary
+    
+    Returns:
+        True if has persistent destination, False otherwise
+    """
+    try:
+        return bool(destination_table) and not is_temp_write
+    except Exception:
+        return False
+
+
+def is_dml_statement(statement_type: str) -> bool:
+    """
+    Determine if the statement is a DML (Data Manipulation Language) operation.
+    
+    Args:
+        statement_type: The type of SQL statement
+    
+    Returns:
+        True if the statement is DML, False otherwise
+    """
+    try:
+        import re
+        dml_patterns = r'(?i)INSERT|MERGE|UPDATE|DELETE|CREATE_TABLE_AS_SELECT'
+        return bool(re.search(dml_patterns, statement_type))
+    except Exception:
+        return False
+
+
 async def main():
     """
     Main orchestration function for the Golden Query Feature Extraction PoC.
@@ -348,31 +580,98 @@ async def main():
         return
     
     logger.info("✅ Phase 1 complete: Raw job history ingestion finished")
+    logger.info("Total jobs ingested from all regions: %d", len(jobs_df))
 
-    # --- Phase 2: Identifying Top 50 Candidates ---
-    top_50_queries, query_frequencies = identify_top_candidates(jobs_df, num_candidates=50)
-    candidate_jobs_df = jobs_df[jobs_df['query'].isin(top_50_queries)].copy()
+    # --- Phase 2: Process All Queries (No Filtering) ---
+    # top_50k_queries, _ = identify_top_candidates(jobs_df, num_candidates=50000)
+    # candidate_jobs_df = jobs_df[jobs_df['query'].isin(top_50k_queries)].copy()
+    # Use all jobs instead of filtering to top candidates
+    candidate_jobs_df = jobs_df.copy()
     if candidate_jobs_df.empty:
-        logger.info("No jobs match the top candidates. Exiting.")
+        logger.info("No jobs found for analysis. Exiting.")
         return
-    logger.info("Filtered down to %d jobs for deep analysis.", len(candidate_jobs_df))
+    logger.info("Processing all %d jobs for comprehensive analysis.", len(candidate_jobs_df))
     
-    logger.info("✅ Phase 2 complete: Top candidates identified")
+    logger.info("✅ Phase 2 complete: Using all queries (no filtering)")
     
-    # --- Phase 3: Shaping and Grouping Candidate Data ---
+    # --- Phase 3: Normalization & Grouping ---
+    total_queries = len(candidate_jobs_df)
     logger.info("Phase 3: Normalizing SQL and grouping jobs by query shape...")
-    shapes = candidate_jobs_df['query'].apply(normalize_sql_to_shape)
-    candidate_jobs_df[['query_shape_id', 'normalized_sql']] = pd.DataFrame(shapes.tolist(), index=candidate_jobs_df.index)
+    logger.info("Total queries to process: %d", total_queries)
+    
+    # Process normalization with progress logging
+    shapes_list = []
+    unique_shapes = set()
+    
+    for idx, (_, row) in enumerate(candidate_jobs_df.iterrows(), 1):
+        shape_id, normalized_sql = normalize_sql_to_shape(row['query'])
+        shapes_list.append((shape_id, normalized_sql))
+        unique_shapes.add(shape_id)
+        
+        # Log progress every 50 queries
+        if idx % 50 == 0 or idx == total_queries:
+            logger.info("Processed %d/%d queries (%.1f%%) - Found %d unique shapes so far", 
+                       idx, total_queries, (idx/total_queries)*100, len(unique_shapes))
+    
+    # Add the normalized data to the dataframe
+    candidate_jobs_df[['query_shape_id', 'normalized_sql']] = pd.DataFrame(shapes_list, index=candidate_jobs_df.index)
     
     grouped_by_shape = candidate_jobs_df.groupby('query_shape_id')
-    logger.info("Phase 3 complete: Found %d unique query shapes from candidates.", len(grouped_by_shape))
+    logger.info("Phase 3 complete: Found %d unique query shapes from %d total queries.", len(grouped_by_shape), total_queries)
     
     logger.info("✅ Phase 3 complete: SQL normalization and grouping finished")
 
     # --- Phase 4: Detailed Feature Extraction ---
-    logger.info("Phase 4: Starting detailed feature extraction for each shape...")
+    total_shapes = len(grouped_by_shape)
+    logger.info("Phase 4: Starting detailed feature extraction for %d unique shapes...", total_shapes)
+    
+    # First pass: Calculate raw complexity scores for normalization and execution data
+    logger.info("Phase 4a: Calculating raw complexity scores for normalization...")
+    raw_complexity_scores = []
+    shape_structural_features = {}
+    shape_execution_data = {}
+    
+    for shape_idx, (shape_id, group_df) in enumerate(grouped_by_shape, 1):
+        rep_row = group_df.iloc[0]
+        structural_features = extract_structural_features(rep_row['normalized_sql'])
+        shape_structural_features[shape_id] = structural_features
+        
+        # Calculate raw complexity score
+        raw_score = calculate_raw_complexity_score(
+            structural_features.get('join_count', 0),
+            structural_features.get('cte_count', 0),
+            structural_features.get('window_function_count', 0),
+            structural_features.get('subquery_count', 0),
+            structural_features.get('aggregation_presence', False)
+        )
+        raw_complexity_scores.append(raw_score)
+        
+        # Calculate execution statistics for this shape
+        timestamps = sorted(group_df['creation_time'].tolist())
+        if len(timestamps) > 1:
+            deltas = [(timestamps[i] - timestamps[i-1]).total_seconds() for i in range(1, len(timestamps))]
+            execution_regularity_stdev = stdev(deltas) if len(deltas) > 1 else 0.0
+        else:
+            execution_regularity_stdev = "SINGLE_EXECUTION"  # More readable than None
+            
+        shape_execution_data[shape_id] = execution_regularity_stdev
+        
+        # Log progress every 50 shapes
+        if shape_idx % 50 == 0 or shape_idx == total_shapes:
+            logger.info("Phase 4a: Processed %d/%d shapes (%.1f%%) - complexity scores calculated", 
+                       shape_idx, total_shapes, (shape_idx/total_shapes)*100)
+    
+    # Normalize complexity scores using actual maximum
+    normalized_scores = normalize_complexity_scores(raw_complexity_scores)
+    logger.info("Phase 4a complete: Normalized complexity scores using max value of %d", 
+                max(raw_complexity_scores) if raw_complexity_scores else 0)
+    
+    # Second pass: Build final feature dictionaries
+    logger.info("Phase 4b: Building final feature dictionaries for %d shapes...", total_shapes)
     final_output_list = []
-    for shape_id, group_df in grouped_by_shape:
+    score_index = 0
+    
+    for shape_idx, (shape_id, group_df) in enumerate(grouped_by_shape, 1):
         # Get a representative row for shape-level data
         rep_row = group_df.iloc[0]
         
@@ -390,12 +689,9 @@ async def main():
         feature_dict['distinct_user_count'] = len(feature_dict['list_of_distinct_users'])
         feature_dict['full_execution_history'] = [ts.isoformat() for ts in timestamps]
         feature_dict['last_execution_timestamp'] = timestamps[-1].isoformat()
-
-        if len(timestamps) > 1:
-            deltas = [(timestamps[i] - timestamps[i-1]).total_seconds() for i in range(1, len(timestamps))]
-            feature_dict['execution_regularity_stdev'] = stdev(deltas) if len(deltas) > 1 else 0.0
-        else:
-            feature_dict['execution_regularity_stdev'] = None
+        
+        # Use pre-calculated execution regularity data
+        feature_dict['execution_regularity_stdev'] = shape_execution_data[shape_id]
 
         # Authorship & Ownership Features
         feature_dict['creator_first_seen_user'] = group_df.loc[group_df['creation_time'].idxmin()]['user_email']
@@ -416,18 +712,49 @@ async def main():
         feature_dict['destination_asset_golden_score'] = None
         
         # Structural Complexity Features
-        feature_dict.update(extract_structural_features(rep_row['normalized_sql']))
+        feature_dict.update(shape_structural_features[shape_id])
         feature_dict['statement_type'] = rep_row['statement_type']
         
+        # Additional Calculated Columns (T-Z equivalent)
+        # T: HoursSinceLastRun
+        feature_dict['hours_since_last_run'] = calculate_hours_since_last_run(feature_dict['last_execution_timestamp'])
+        
+        # U: RegularityHours (single executions get "SINGLE_EXECUTION" string)
+        feature_dict['regularity_hours'] = calculate_regularity_hours(feature_dict['execution_regularity_stdev'])
+        
+        # V: ComplexityScore (normalized using actual data maximum)
+        feature_dict['complexity_score'] = normalized_scores[score_index]
+        
+        # W: SourceTableCount
+        feature_dict['source_table_count'] = calculate_source_table_count(feature_dict['source_tables'])
+        
+        # X: IsServiceAccount
+        feature_dict['is_service_account'] = is_service_account(feature_dict['primary_user_most_frequent_executor'])
+        
+        # Y: HasPersistentDestination
+        feature_dict['has_persistent_destination'] = has_persistent_destination(
+            feature_dict['destination_table'], 
+            feature_dict['is_temporary_write']
+        )
+        
+        # Z: IsDML
+        feature_dict['is_dml'] = is_dml_statement(feature_dict['statement_type'])
+        
         final_output_list.append(feature_dict)
+        score_index += 1
+        
+        # Log progress every 50 shapes
+        if shape_idx % 50 == 0 or shape_idx == total_shapes:
+            logger.info("Phase 4b: Built features for %d/%d shapes (%.1f%%) - %d complete", 
+                       shape_idx, total_shapes, (shape_idx/total_shapes)*100, len(final_output_list))
 
     logger.info("Phase 4 complete: Extracted features for %d shapes.", len(final_output_list))
     
     logger.info("✅ Phase 4 complete: Feature extraction finished")
     
     # --- Phase 5: Final Output Generation ---
-    json_output_filename = 'golden_queries_poc_output.json'
-    csv_output_filename = 'golden_queries_poc_output.csv'
+    json_output_filename = 'bq_golden_queries_output.json'
+    csv_output_filename = 'bq_golden_queries_output.csv'
     logger.info("Phase 5: Writing output to %s and %s...", json_output_filename, csv_output_filename)
 
     if final_output_list:
@@ -441,12 +768,22 @@ async def main():
         output_df = pd.DataFrame(final_output_list)
         
         # Define a logical column order to make the CSV easier to analyze (from plan2.txt).
+        # Original columns (A-S) plus new calculated columns (T-Z)
         column_order = [
+            # Original columns A-S
             'query_shape_id', 'statement_type', 'total_execution_count', 'distinct_user_count', 
             'last_execution_timestamp', 'creator_first_seen_user', 'primary_user_most_frequent_executor',
             'join_count', 'cte_count', 'window_function_count', 'aggregation_presence', 'subquery_count',
             'destination_table', 'is_temporary_write', 'source_tables', 'list_of_distinct_users', 
-            'full_execution_history', 'execution_regularity_stdev', 'normalized_sql'
+            'full_execution_history', 'execution_regularity_stdev', 'normalized_sql',
+            # New calculated columns T-Z
+            'hours_since_last_run',       # T: HoursSinceLastRun
+            'regularity_hours',           # U: RegularityHours  
+            'complexity_score',           # V: ComplexityScore
+            'source_table_count',         # W: SourceTableCount
+            'is_service_account',         # X: IsServiceAccount
+            'has_persistent_destination', # Y: HasPersistentDestination
+            'is_dml'                      # Z: IsDML
         ]
         
         # Filter to only include columns that were actually generated, maintaining order.
@@ -465,7 +802,16 @@ async def main():
             f.write('')
         logger.info("No query shapes were processed, empty output files have been created.")
 
-    logger.info("✅ Proof of Concept script finished successfully.")
+    # Final analysis summary
+    if final_output_list:
+        logger.info("📊 ANALYSIS SUMMARY:")
+        logger.info("  • Total jobs processed: %d", len(jobs_df))
+        logger.info("  • Unique query shapes found: %d", len(final_output_list))
+        logger.info("  • Output files: %s, %s", json_output_filename, csv_output_filename)
+        logger.info("  • Analysis coverage: %.1f%% reduction (from %d jobs to %d shapes)", 
+                   (1 - len(final_output_list)/len(jobs_df)) * 100, len(jobs_df), len(final_output_list))
+
+    logger.info("✅ Golden Query analysis finished successfully.")
 
 
 if __name__ == "__main__":
