@@ -34,11 +34,12 @@ import json
 import asyncio
 import hashlib
 import logging
+import math
+import time
 from datetime import datetime, timezone, timedelta
 from collections import Counter
 from statistics import stdev
 from typing import Dict, List, Any, Tuple, Optional
-from asyncio import Queue
 
 # Add the parent directory to the path to import from bigquery module
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
@@ -55,6 +56,9 @@ from dotenv import load_dotenv
 # Import the base extractor from the existing codebase
 from bigquery.metadata import BigQueryMetadataExtractor
 
+# Import BigQuery client for query configuration
+from google.cloud import bigquery
+
 # --- Configuration ---
 # Load environment variables from .env file
 load_dotenv()
@@ -65,8 +69,6 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
-
-
 
 
 class GoldenQueryFeatureExtractor(BigQueryMetadataExtractor):
@@ -91,136 +93,92 @@ class GoldenQueryFeatureExtractor(BigQueryMetadataExtractor):
         Returns:
             A list of dictionaries, where each dictionary represents a raw job record.
         """
-        # This query is designed to fetch all necessary fields for the subsequent
-        # feature extraction process.
-        # Add row limit to prevent timeout on very large datasets
-        query = f"""
-            SELECT
-                query,
-                user_email,
-                creation_time,
-                start_time,
-                end_time,
-                statement_type,
-                referenced_tables,
-                destination_table,
-                job_id
-            FROM
-                `{self.project_id}.region-{region}.INFORMATION_SCHEMA.JOBS_BY_PROJECT`
-            WHERE
-                job_type = 'QUERY'
-                AND state = 'DONE'
-                AND start_time >= '{start_date.isoformat()}'
-            ORDER BY start_time DESC
-        """
+        # Fixed SQL with correct INFORMATION_SCHEMA path and parameterized query
+        sql = """
+        SELECT
+          user_email, query, creation_time, start_time, end_time,
+          statement_type, referenced_tables, destination_table, job_id
+        FROM `region-{}`.INFORMATION_SCHEMA.JOBS_BY_PROJECT
+        WHERE project_id = @project_id
+          AND job_type = 'QUERY'
+          AND state = 'DONE'
+          AND start_time >= @start_time
+        """.format(region)
+
+        # Use parameterized queries for security and correctness
+        cfg = bigquery.QueryJobConfig(
+            query_parameters=[
+                bigquery.ScalarQueryParameter("project_id", "STRING", self.project_id),
+                bigquery.ScalarQueryParameter("start_time", "TIMESTAMP", start_date),
+            ]
+        )
+
+        def fetch_sync():
+            """Simple sync function to stream pages - runs in background thread"""
+            job = self.client.query(sql, job_config=cfg)
+            page_size = 10_000
+            it = job.result(page_size=page_size)  # Large pages = fewer round trips
+            rows = []
+            
+            # Get total rows from BigQuery result and calculate expected pages
+            total_rows = it.total_rows
+            expected_total_pages = math.ceil(total_rows / page_size) if total_rows > 0 else 0
+            logger.info("Starting to fetch pages for region %s - Total rows: %d, Expected pages: %d", 
+                       region, total_rows, expected_total_pages)
+            page_count = 0
+            start_time = time.time()
+            last_milestone_time = start_time
+            
+            for page in it.pages:
+                page_count += 1
+                page_rows = 0
+                
+                for r in page:
+                    # Build only what we need; avoid heavy conversions
+                    rows.append({
+                        "user_email": r.user_email,
+                        "query": r.query,
+                        "creation_time": r.creation_time,
+                        "start_time": r.start_time,
+                        "end_time": r.end_time,
+                        "statement_type": r.statement_type,
+                        "referenced_tables": [
+                            f"{t['project_id']}.{t['dataset_id']}.{t['table_id']}"
+                            for t in r.referenced_tables
+                        ] if r.referenced_tables else [],
+                        "destination_table": (
+                            f"{r.destination_table['project_id']}."
+                            f"{r.destination_table['dataset_id']}."
+                            f"{r.destination_table['table_id']}"
+                        ) if r.destination_table else None,
+                        "job_id": r.job_id,
+                    })
+                    page_rows += 1
+                    
+                    # Log progress every 10,000 records
+                    if len(rows) % 10000 == 0:
+                        current_time = time.time()
+                        batch_time = current_time - last_milestone_time
+                        total_elapsed = current_time - start_time
+                        total_elapsed_minutes = total_elapsed / 60.0
+                        progress_pct = (len(rows) / total_rows * 100) if total_rows > 0 else 0
+                        logger.info("Region %s: Processed %d of %d records (%.1f%%) across %d of %d pages - Batch: %.1fs, Total: %.1fm", 
+                                  region, len(rows), total_rows, progress_pct, page_count, expected_total_pages, 
+                                  batch_time, total_elapsed_minutes)
+                        last_milestone_time = current_time
+            
+            final_time = time.time()
+            total_processing_time = final_time - start_time
+            total_processing_minutes = total_processing_time / 60.0
+            logger.info("Region %s: Completed - %d of %d records (100.0%%) across %d of %d pages - Total time: %.1fm (%.1fs)", 
+                       region, len(rows), total_rows, page_count, expected_total_pages, total_processing_minutes, total_processing_time)
+            return rows
+
         try:
             logger.info("Executing query for region %s...", region)
-            query_job = await asyncio.to_thread(self.client.query, query)
-            logger.info("Query submitted for region %s, waiting for results...", region)
-            
-            # Get total row count before processing (doesn't load all data)
-            result = query_job.result()
-            total_rows = result.total_rows
-            logger.info(f"Query completed for region {region}, total rows found: {total_rows:,}")
-            logger.info(f"Starting to process {total_rows:,} rows for region {region}...")
-            
-            
-            # Producer-consumer pattern for parallel streaming processing
-            async def producer(result_iterator, task_queue, batch_size=5000):
-                """Producer: feeds BigQuery rows directly to queue"""
-                batch = []
-                batch_count = 0
-                for row in result_iterator:
-                    # Pass BigQuery Row objects directly (no conversion needed)
-                    batch.append(row)
-                    if len(batch) % 1000 == 0:
-                        logger.info(f"Producer: Added 1000 rows to batch {batch_count}, batch size: {len(batch)}")
-                    if len(batch) >= batch_size:
-                        # Debug: Check if queue is getting full
-                        if task_queue.qsize() >= 45:  # Near max capacity
-                            logger.info(f"Producer waiting - queue full ({task_queue.qsize()}/50)")
-                        await task_queue.put(batch)
-                        batch = []
-                        batch_count += 1
-                        
-                        # Debug: Log producer progress periodically
-                        if batch_count % 100 == 0:
-                            logger.info(f"Producer: {batch_count} batches sent, queue size: {task_queue.qsize()}")
-                
-                # Put remaining rows
-                if batch:
-                    await task_queue.put(batch)
-                    batch_count += 1
-                
-                # Signal completion
-                await task_queue.put(None)
-                logger.info(f"Producer finished: {batch_count} batches sent")
-
-            async def consumer(task_queue, results_list, region):
-                """Consumer: simple direct processing without multiprocessing overhead"""
-                total_processed = 0
-                batch_count = 0
-                
-                while True:
-                    batch = await task_queue.get()
-                    logger.info(f"Consumer: Processing batch {batch_count} with {len(batch)} rows")
-                    if batch is None:
-                        break
-                    
-                    batch_count += 1
-                    
-                    # Process batch directly with BigQuery Row objects
-                    batch_results = []
-                    for row in batch:
-                        # Handle destination_table safely
-                        dest_table = None
-                        if row.destination_table:
-                            try:
-                                dest_table = f"{row.destination_table['project_id']}.{row.destination_table['dataset_id']}.{row.destination_table['table_id']}"
-                            except (KeyError, TypeError):
-                                dest_table = str(row.destination_table)
-                        
-                        # Handle referenced_tables safely  
-                        ref_tables = []
-                        if row.referenced_tables:
-                            try:
-                                ref_tables = [f"{t['project_id']}.{t['dataset_id']}.{t['table_id']}" for t in row.referenced_tables]
-                            except (KeyError, TypeError):
-                                ref_tables = [str(t) for t in row.referenced_tables]
-                        
-                        batch_results.append({
-                            "query": row.query,
-                            "user_email": row.user_email,
-                            "creation_time": row.creation_time,
-                            "start_time": row.start_time,
-                            "end_time": row.end_time,
-                            "statement_type": row.statement_type,
-                            "destination_table": dest_table,
-                            "referenced_tables": ref_tables,
-                            "job_id": row.job_id
-                        })
-                    
-                    results_list.extend(batch_results)
-                    total_processed += len(batch_results)
-                    
-                    # Debug: Progress logging
-                    if total_processed % 10000 == 0:
-                        logger.info(f"Region {region}: Processed {total_processed} rows (direct processing) - queue: {task_queue.qsize()}")
-                
-                logger.info(f"Region {region}: Final count - {total_processed} rows, {batch_count} batches processed")
-
-            # Create queue and run producer-consumer
-            task_queue = Queue(maxsize=50)  # Buffer up to 50 batches
-            rows = []
-
-            # Run producer and consumer concurrently
-            producer_task = asyncio.create_task(producer(result, task_queue))
-            consumer_task = asyncio.create_task(consumer(task_queue, rows, region))
-
-            # Wait for both to complete
-            await asyncio.gather(producer_task, consumer_task)
-            
-            logger.info("Fetched %d raw job records from region: %s (processed directly)", len(rows), region)
+            # Run the entire sync operation in a background thread
+            rows = await asyncio.to_thread(fetch_sync)
+            logger.info("Successfully fetched %d raw job records from region: %s", len(rows), region)
             return rows
         except Exception as e:
             logger.warning("Failed to fetch raw jobs from region %s: %s", region, e)
