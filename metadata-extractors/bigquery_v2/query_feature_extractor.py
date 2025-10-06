@@ -55,8 +55,15 @@ from dotenv import load_dotenv
 # Import the base extractor from the existing codebase
 from bigquery.metadata import BigQueryMetadataExtractor
 
-# Import BigQuery client for query configuration
+# Import BigQuery client for query configuration and Storage API for fast downloads
 from google.cloud import bigquery
+
+try:
+    from google.cloud import bigquery_storage
+    STORAGE_API_AVAILABLE = True
+except ImportError:
+    bigquery_storage = None
+    STORAGE_API_AVAILABLE = False
 
 # --- Configuration ---
 # Load environment variables from .env file
@@ -87,28 +94,6 @@ class GoldenQueryFeatureExtractor(BigQueryMetadataExtractor):
         super().__init__(credentials)
         logger.info("Initialized GoldenQueryFeatureExtractor")
 
-    def _row_to_dict(self, r):
-        """Convert a BigQuery Row object to a dictionary with consistent field handling."""
-        refs = []
-        for t in (getattr(r, "referenced_tables", None) or []):
-            refs.append(f"{t['project_id']}.{t['dataset_id']}.{t['table_id']}")
-        
-        dest = None
-        dt = getattr(r, "destination_table", None)
-        if dt:
-            dest = f"{dt['project_id']}.{dt['dataset_id']}.{dt['table_id']}"
-        
-        return {
-            "user_email": r.user_email,
-            "query": r.query,
-            "creation_time": r.creation_time,
-            "start_time": r.start_time,
-            "end_time": r.end_time,
-            "statement_type": r.statement_type,
-            "referenced_tables": refs,
-            "destination_table": dest,
-            "job_id": r.job_id,
-        }
 
     async def _fetch_raw_jobs_for_region(self, region: str, start_date: datetime) -> pd.DataFrame:
         """
@@ -123,13 +108,13 @@ class GoldenQueryFeatureExtractor(BigQueryMetadataExtractor):
         """
         # Fixed SQL with correct INFORMATION_SCHEMA path and parameterized query
         sql = """
-        SELECT
+            SELECT
           user_email, query, creation_time, start_time, end_time,
           statement_type, referenced_tables, destination_table, job_id
         FROM `region-{}`.INFORMATION_SCHEMA.JOBS_BY_PROJECT
         WHERE project_id = @project_id
           AND job_type = 'QUERY'
-          AND state = 'DONE'
+                AND state = 'DONE'
           AND start_time >= @start_time
         """.format(region)
 
@@ -142,60 +127,92 @@ class GoldenQueryFeatureExtractor(BigQueryMetadataExtractor):
         )
 
         def fetch_sync():
-            """DataFrame-per-page sync function - runs in background thread for optimal memory usage"""
+            """Storage API sync function - runs in background thread for optimal speed and memory usage"""
+            # Run query
             job = self.client.query(sql, job_config=cfg)
-            page_size = 50_000
-            it = job.result(page_size=page_size)  # Large pages = fewer round trips
-            page_dfs = []
             
-            # Get total rows from BigQuery result
-            total_rows = it.total_rows
-            logger.info("Starting to fetch pages for region %s - Total rows: %d (page_size hint: %d)", 
-                       region, total_rows, page_size)
-            page_count = 0
             total_processed = 0
             start_time = time.time()
             last_milestone_time = start_time
             last_logged_milestone = 0
+            chunks = []
             
-            for page in it.pages:
-                page_count += 1
-                # Convert page to DataFrame immediately for memory efficiency
-                batch = [self._row_to_dict(r) for r in page]
-                if batch:
-                    page_df = pd.DataFrame.from_records(batch, columns=JOB_COLS)
-                    page_dfs.append(page_df)
-                    total_processed += len(page_df)
+            if STORAGE_API_AVAILABLE:
+                try:
+                    # Get the RowIterator (this is where to_dataframe_iterable lives!)
+                    row_iter = job.result()
                     
-                    # Log actual page size (50k is just a hint to BigQuery)
-                    logger.info("Region %s: Page %d - Actual size: %d records (hint was %d)", 
-                              region, page_count, len(page_df), page_size)
+                    if hasattr(row_iter, 'to_dataframe_iterable'):
+                        # Use Storage API for fast binary downloads via RowIterator
+                        bqs = bigquery_storage.BigQueryReadClient()
+                        logger.info("Starting Storage API download for region %s...", region)
+                        
+                        for chunk_num, df_chunk in enumerate(
+                            row_iter.to_dataframe_iterable(
+                                bqstorage_client=bqs,
+                                max_stream_count=4  # Allow parallel streams
+                            ), start=1
+                        ):
+                            # Ensure consistent column order
+                            df_chunk = df_chunk.reindex(columns=JOB_COLS, fill_value=None)
+                            chunks.append(df_chunk)
+                            total_processed += len(df_chunk)
+                            
+                            # Log chunk info
+                            logger.info("Region %s: Chunk %d - %d records (cumulative: %d)", 
+                                      region, chunk_num, len(df_chunk), total_processed)
+                            
+                            # Log progress every 10,000 records
+                            current_milestone = (total_processed // 10000) * 10000
+                            if current_milestone > last_logged_milestone and current_milestone > 0:
+                                current_time = time.time()
+                                batch_time = current_time - last_milestone_time
+                                total_elapsed = current_time - start_time
+                                total_elapsed_minutes = total_elapsed / 60.0
+                                logger.info("Region %s: Processed %d records via Storage API - Batch: %.1fs, Total: %.1fm", 
+                                          region, current_milestone, batch_time, total_elapsed_minutes)
+                                last_milestone_time = current_time
+                                last_logged_milestone = current_milestone
+                                
+                        logger.info("Region %s: Storage API download complete - %d records across %d chunks", 
+                                   region, total_processed, len(chunks))
+                    else:
+                        logger.info("RowIterator doesn't have to_dataframe_iterable, using fallback...")
+                        chunks = []  # Trigger fallback
+                        
+                except Exception as e:
+                    logger.warning("Storage API failed for region %s: %s, falling back to regular conversion", region, e)
+                    chunks = []  # Reset chunks to trigger fallback
+                    total_processed = 0
+            
+            # Use fallback if Storage API not available or failed
+            if not chunks:
+                logger.info("Using fallback DataFrame conversion for region %s...", region)
+                if STORAGE_API_AVAILABLE:
+                    # Use Storage API with single DataFrame (still fast)
+                    bqs = bigquery_storage.BigQueryReadClient()
+                    result_df = job.to_dataframe(bqstorage_client=bqs)
+                else:
+                    # Regular conversion without Storage API
+                    result_df = job.to_dataframe()
                     
-                    # Log progress every 10,000 records (simple counter approach)
-                    current_milestone = (total_processed // 10000) * 10000
-                    if current_milestone > last_logged_milestone and current_milestone > 0:
-                        current_time = time.time()
-                        batch_time = current_time - last_milestone_time
-                        total_elapsed = current_time - start_time
-                        total_elapsed_minutes = total_elapsed / 60.0
-                        progress_pct = (current_milestone / total_rows * 100) if total_rows > 0 else 0
-                        logger.info("Region %s: Processed %d of %d records (%.1f%%) across %d pages - Batch: %.1fs, Total: %.1fm", 
-                                  region, current_milestone, total_rows, progress_pct, page_count, 
-                                  batch_time, total_elapsed_minutes)
-                        last_milestone_time = current_time
-                        last_logged_milestone = current_milestone
+                if not result_df.empty:
+                    result_df = result_df.reindex(columns=JOB_COLS, fill_value=None)
+                chunks = [result_df] if not result_df.empty else []
+                total_processed = len(result_df) if not result_df.empty else 0
+                logger.info("Region %s: Fallback conversion complete - %d records", region, total_processed)
             
             final_time = time.time()
             total_processing_time = final_time - start_time
             total_processing_minutes = total_processing_time / 60.0
-            logger.info("Region %s: Completed - %d of %d records (100.0%%) across %d pages - Total time: %.1fm (%.1fs)", 
-                       region, total_processed, total_rows, page_count, total_processing_minutes, total_processing_time)
+            logger.info("Region %s: Download complete - %d records - Total time: %.1fm (%.1fs)", 
+                       region, total_processed, total_processing_minutes, total_processing_time)
             
-            # Concatenate all page DataFrames into single result
-            if page_dfs:
-                result_df = pd.concat(page_dfs, ignore_index=True)
-                logger.info("Region %s: Concatenated %d page DataFrames into final result - %d rows, %d columns", 
-                          region, len(page_dfs), len(result_df), len(result_df.columns))
+            # Concatenate all chunks into single result
+            if chunks:
+                result_df = pd.concat(chunks, ignore_index=True) if len(chunks) > 1 else chunks[0]
+                logger.info("Region %s: Final DataFrame - %d rows, %d columns", 
+                          region, len(result_df), len(result_df.columns))
                 return result_df
             else:
                 logger.info("Region %s: No data found, returning empty DataFrame", region)
