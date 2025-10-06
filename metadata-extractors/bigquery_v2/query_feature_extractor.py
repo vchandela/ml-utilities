@@ -70,6 +70,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Column names for consistent DataFrame structure
+JOB_COLS = [
+    "user_email", "query", "creation_time", "start_time", "end_time",
+    "statement_type", "referenced_tables", "destination_table", "job_id"
+]
+
 
 class GoldenQueryFeatureExtractor(BigQueryMetadataExtractor):
     """
@@ -82,7 +88,30 @@ class GoldenQueryFeatureExtractor(BigQueryMetadataExtractor):
         super().__init__(credentials)
         logger.info("Initialized GoldenQueryFeatureExtractor")
 
-    async def _fetch_raw_jobs_for_region(self, region: str, start_date: datetime) -> List[Dict[str, Any]]:
+    def _row_to_dict(self, r):
+        """Convert a BigQuery Row object to a dictionary with consistent field handling."""
+        refs = []
+        for t in (getattr(r, "referenced_tables", None) or []):
+            refs.append(f"{t['project_id']}.{t['dataset_id']}.{t['table_id']}")
+        
+        dest = None
+        dt = getattr(r, "destination_table", None)
+        if dt:
+            dest = f"{dt['project_id']}.{dt['dataset_id']}.{dt['table_id']}"
+        
+        return {
+            "user_email": r.user_email,
+            "query": r.query,
+            "creation_time": r.creation_time,
+            "start_time": r.start_time,
+            "end_time": r.end_time,
+            "statement_type": r.statement_type,
+            "referenced_tables": refs,
+            "destination_table": dest,
+            "job_id": r.job_id,
+        }
+
+    async def _fetch_raw_jobs_for_region(self, region: str, start_date: datetime) -> pd.DataFrame:
         """
         Queries a single BigQuery region to fetch detailed job history.
 
@@ -91,7 +120,7 @@ class GoldenQueryFeatureExtractor(BigQueryMetadataExtractor):
             start_date: The earliest creation time for jobs to fetch.
 
         Returns:
-            A list of dictionaries, where each dictionary represents a raw job record.
+            A pandas DataFrame containing raw job records with optimized memory usage.
         """
         # Fixed SQL with correct INFORMATION_SCHEMA path and parameterized query
         sql = """
@@ -114,11 +143,11 @@ class GoldenQueryFeatureExtractor(BigQueryMetadataExtractor):
         )
 
         def fetch_sync():
-            """Simple sync function to stream pages - runs in background thread"""
+            """DataFrame-per-page sync function - runs in background thread for optimal memory usage"""
             job = self.client.query(sql, job_config=cfg)
-            page_size = 10_000
+            page_size = 50_000
             it = job.result(page_size=page_size)  # Large pages = fewer round trips
-            rows = []
+            page_dfs = []
             
             # Get total rows from BigQuery result and calculate expected pages
             total_rows = it.total_rows
@@ -126,63 +155,58 @@ class GoldenQueryFeatureExtractor(BigQueryMetadataExtractor):
             logger.info("Starting to fetch pages for region %s - Total rows: %d, Expected pages: %d", 
                        region, total_rows, expected_total_pages)
             page_count = 0
+            total_processed = 0
             start_time = time.time()
             last_milestone_time = start_time
             
             for page in it.pages:
                 page_count += 1
-                page_rows = 0
-                
-                for r in page:
-                    # Build only what we need; avoid heavy conversions
-                    rows.append({
-                        "user_email": r.user_email,
-                        "query": r.query,
-                        "creation_time": r.creation_time,
-                        "start_time": r.start_time,
-                        "end_time": r.end_time,
-                        "statement_type": r.statement_type,
-                        "referenced_tables": [
-                            f"{t['project_id']}.{t['dataset_id']}.{t['table_id']}"
-                            for t in r.referenced_tables
-                        ] if r.referenced_tables else [],
-                        "destination_table": (
-                            f"{r.destination_table['project_id']}."
-                            f"{r.destination_table['dataset_id']}."
-                            f"{r.destination_table['table_id']}"
-                        ) if r.destination_table else None,
-                        "job_id": r.job_id,
-                    })
-                    page_rows += 1
+                # Convert page to DataFrame immediately for memory efficiency
+                batch = [self._row_to_dict(r) for r in page]
+                if batch:
+                    page_df = pd.DataFrame.from_records(batch, columns=JOB_COLS)
+                    page_dfs.append(page_df)
+                    total_processed += len(page_df)
                     
                     # Log progress every 10,000 records
-                    if len(rows) % 10000 == 0:
-                        current_time = time.time()
-                        batch_time = current_time - last_milestone_time
-                        total_elapsed = current_time - start_time
-                        total_elapsed_minutes = total_elapsed / 60.0
-                        progress_pct = (len(rows) / total_rows * 100) if total_rows > 0 else 0
-                        logger.info("Region %s: Processed %d of %d records (%.1f%%) across %d of %d pages - Batch: %.1fs, Total: %.1fm", 
-                                  region, len(rows), total_rows, progress_pct, page_count, expected_total_pages, 
-                                  batch_time, total_elapsed_minutes)
-                        last_milestone_time = current_time
+                    if total_processed % 10000 == 0 or (total_processed // 10000) != ((total_processed - len(page_df)) // 10000):
+                        if total_processed % 10000 == 0:
+                            current_time = time.time()
+                            batch_time = current_time - last_milestone_time
+                            total_elapsed = current_time - start_time
+                            total_elapsed_minutes = total_elapsed / 60.0
+                            progress_pct = (total_processed / total_rows * 100) if total_rows > 0 else 0
+                            logger.info("Region %s: Processed %d of %d records (%.1f%%) across %d of %d pages - Batch: %.1fs, Total: %.1fm", 
+                                      region, total_processed, total_rows, progress_pct, page_count, expected_total_pages, 
+                                      batch_time, total_elapsed_minutes)
+                            last_milestone_time = current_time
             
             final_time = time.time()
             total_processing_time = final_time - start_time
             total_processing_minutes = total_processing_time / 60.0
             logger.info("Region %s: Completed - %d of %d records (100.0%%) across %d of %d pages - Total time: %.1fm (%.1fs)", 
-                       region, len(rows), total_rows, page_count, expected_total_pages, total_processing_minutes, total_processing_time)
-            return rows
+                       region, total_processed, total_rows, page_count, expected_total_pages, total_processing_minutes, total_processing_time)
+            
+            # Concatenate all page DataFrames into single result
+            if page_dfs:
+                result_df = pd.concat(page_dfs, ignore_index=True)
+                logger.info("Region %s: Concatenated %d page DataFrames into final result - %d rows, %d columns", 
+                          region, len(page_dfs), len(result_df), len(result_df.columns))
+                return result_df
+            else:
+                logger.info("Region %s: No data found, returning empty DataFrame", region)
+                return pd.DataFrame(columns=JOB_COLS)
 
         try:
             logger.info("Executing query for region %s...", region)
             # Run the entire sync operation in a background thread
-            rows = await asyncio.to_thread(fetch_sync)
-            logger.info("Successfully fetched %d raw job records from region: %s", len(rows), region)
-            return rows
+            df = await asyncio.to_thread(fetch_sync)
+            logger.info("Successfully fetched %d raw job records from region: %s", len(df), region)
+            return df
         except Exception as e:
             logger.warning("Failed to fetch raw jobs from region %s: %s", region, e)
-            return []
+            # Return empty DataFrame with consistent columns
+            return pd.DataFrame(columns=JOB_COLS)
 
     async def get_raw_job_history(self, days_back: int = 180) -> pd.DataFrame:
         """
@@ -210,19 +234,19 @@ class GoldenQueryFeatureExtractor(BigQueryMetadataExtractor):
         tasks = [self._fetch_raw_jobs_for_region(region, start_date) for region in regions]
         regional_results = await asyncio.gather(*tasks)
 
-        # Step 3: Aggregate results into a single list and convert to a DataFrame.
-        all_jobs = []
-        for i, result in enumerate(regional_results):
-            region_name = regions[i]
-            logger.info("Region %s: Fetched %d jobs", region_name, len(result))
-            all_jobs.extend(result)
-            
-        if not all_jobs:
+        # Step 3: Log results and concatenate non-empty DataFrames
+        for region_name, df in zip(regions, regional_results):
+            logger.info("Region %s: Fetched %d jobs", region_name, len(df))
+
+        non_empty = [df for df in regional_results if not df.empty]
+        if not non_empty:
             logger.warning("No jobs found in the specified time window.")
-            return pd.DataFrame()
-        
-        logger.info("Phase 1 complete: Ingested a total of %d jobs from %d regions.", len(all_jobs), len(regions))
-        return pd.DataFrame(all_jobs)
+            return pd.DataFrame(columns=JOB_COLS)
+
+        # Single efficient concat operation 
+        jobs_df = pd.concat(non_empty, ignore_index=True)
+        logger.info("Phase 1 complete: Ingested a total of %d jobs from %d regions.", len(jobs_df), len(regions))
+        return jobs_df
 
 
 def identify_top_candidates(jobs_df: pd.DataFrame, num_candidates: int = 50000) -> Tuple[set, pd.Series]:
