@@ -1,0 +1,29 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  generateName: bqv2-run-
+  namespace: default
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: bigquery-v2
+        image: us-central1-docker.pkg.dev/onboarding-455713/donboard-v1/bigquery-v2:latest
+        imagePullPolicy: Always
+        env:
+        - name: BIGQUERY_PROJECT_ID
+          value: "seekho-c084b"
+        - name: BIGQUERY_SA_CREDS_JSON
+          valueFrom:
+            secretKeyRef:
+              name: bqv2-creds
+              key: BIGQUERY_SA_CREDS_JSON
+        resources:
+          requests:
+            cpu: "4"
+            memory: "16Gi"
+          limits:
+            cpu: "8"
+            memory: "16Gi"

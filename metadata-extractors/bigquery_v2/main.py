@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Import the golden query feature extractor
-from query_feature_extractor import main as run_feature_extraction
+from .query_feature_extractor import main as run_feature_extraction
 
 async def main():
     """Main function to run the Golden Query Feature Extractor"""
