@@ -34,7 +34,6 @@ import json
 import asyncio
 import hashlib
 import logging
-import math
 import time
 from datetime import datetime, timezone, timedelta
 from collections import Counter
@@ -149,15 +148,15 @@ class GoldenQueryFeatureExtractor(BigQueryMetadataExtractor):
             it = job.result(page_size=page_size)  # Large pages = fewer round trips
             page_dfs = []
             
-            # Get total rows from BigQuery result and calculate expected pages
+            # Get total rows from BigQuery result
             total_rows = it.total_rows
-            expected_total_pages = math.ceil(total_rows / page_size) if total_rows > 0 else 0
-            logger.info("Starting to fetch pages for region %s - Total rows: %d, Expected pages: %d", 
-                       region, total_rows, expected_total_pages)
+            logger.info("Starting to fetch pages for region %s - Total rows: %d (page_size hint: %d)", 
+                       region, total_rows, page_size)
             page_count = 0
             total_processed = 0
             start_time = time.time()
             last_milestone_time = start_time
+            last_logged_milestone = 0
             
             for page in it.pages:
                 page_count += 1
@@ -168,24 +167,29 @@ class GoldenQueryFeatureExtractor(BigQueryMetadataExtractor):
                     page_dfs.append(page_df)
                     total_processed += len(page_df)
                     
-                    # Log progress every 10,000 records
-                    if total_processed % 10000 == 0 or (total_processed // 10000) != ((total_processed - len(page_df)) // 10000):
-                        if total_processed % 10000 == 0:
-                            current_time = time.time()
-                            batch_time = current_time - last_milestone_time
-                            total_elapsed = current_time - start_time
-                            total_elapsed_minutes = total_elapsed / 60.0
-                            progress_pct = (total_processed / total_rows * 100) if total_rows > 0 else 0
-                            logger.info("Region %s: Processed %d of %d records (%.1f%%) across %d of %d pages - Batch: %.1fs, Total: %.1fm", 
-                                      region, total_processed, total_rows, progress_pct, page_count, expected_total_pages, 
-                                      batch_time, total_elapsed_minutes)
-                            last_milestone_time = current_time
+                    # Log actual page size (50k is just a hint to BigQuery)
+                    logger.info("Region %s: Page %d - Actual size: %d records (hint was %d)", 
+                              region, page_count, len(page_df), page_size)
+                    
+                    # Log progress every 10,000 records (simple counter approach)
+                    current_milestone = (total_processed // 10000) * 10000
+                    if current_milestone > last_logged_milestone and current_milestone > 0:
+                        current_time = time.time()
+                        batch_time = current_time - last_milestone_time
+                        total_elapsed = current_time - start_time
+                        total_elapsed_minutes = total_elapsed / 60.0
+                        progress_pct = (current_milestone / total_rows * 100) if total_rows > 0 else 0
+                        logger.info("Region %s: Processed %d of %d records (%.1f%%) across %d pages - Batch: %.1fs, Total: %.1fm", 
+                                  region, current_milestone, total_rows, progress_pct, page_count, 
+                                  batch_time, total_elapsed_minutes)
+                        last_milestone_time = current_time
+                        last_logged_milestone = current_milestone
             
             final_time = time.time()
             total_processing_time = final_time - start_time
             total_processing_minutes = total_processing_time / 60.0
-            logger.info("Region %s: Completed - %d of %d records (100.0%%) across %d of %d pages - Total time: %.1fm (%.1fs)", 
-                       region, total_processed, total_rows, page_count, expected_total_pages, total_processing_minutes, total_processing_time)
+            logger.info("Region %s: Completed - %d of %d records (100.0%%) across %d pages - Total time: %.1fm (%.1fs)", 
+                       region, total_processed, total_rows, page_count, total_processing_minutes, total_processing_time)
             
             # Concatenate all page DataFrames into single result
             if page_dfs:
