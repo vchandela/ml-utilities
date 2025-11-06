@@ -66,7 +66,9 @@ class MetabaseExtractor:
     ) -> dict:
         """Execute a card's query and return first N rows as structured data."""
         try:
-            result = self._post(f"/api/card/{card_id}/query", {"parameters": []})
+            result = self._post(
+                f"/api/card/{card_id}/query", {"parameters": [], "ignore_cache": False}
+            )
         except Exception as e:
             return {"data_error": str(e)[:200]}
 
