@@ -6,3 +6,5 @@ cloned_repos/
 .vscode/
 *.json
 *.csv
+_metabase_dump/
+repomix-*
